@@ -36,15 +36,24 @@ export const getOrder = id => async dispatch => {
     dispatch({ type: SET_LOADING });
     
     const res = await axios.get(`/api/orders/${id}`);
+    console.log('Order response:', res.data);
+
+    if (!res.data.success) {
+      throw new Error(res.data.message || 'Failed to fetch order');
+    }
 
     dispatch({
       type: GET_ORDER,
       payload: res.data.data
     });
   } catch (err) {
+    console.error('Error fetching order:', err.response?.data || err.message);
     dispatch({
       type: ORDER_ERROR,
-      payload: { msg: err.response.data.message, status: err.response.status }
+      payload: { 
+        msg: err.response?.data?.message || err.message || 'Failed to fetch order',
+        status: err.response?.status
+      }
     });
   }
 };

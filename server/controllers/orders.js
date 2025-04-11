@@ -49,6 +49,10 @@ exports.getOrders = async (req, res) => {
 // @access  Private
 exports.getOrder = async (req, res) => {
   try {
+    console.log('Fetching order:', req.params.id);
+    console.log('User ID:', req.user.id);
+    console.log('User Role:', req.user.role);
+
     const order = await Order.findById(req.params.id)
       .populate({
         path: 'product',
@@ -64,16 +68,30 @@ exports.getOrder = async (req, res) => {
       });
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      console.log('Order not found');
+      return res.status(404).json({ 
+        success: false,
+        message: 'Order not found' 
+      });
     }
+
+    console.log('Order found:', {
+      buyer: order.buyer._id.toString(),
+      farmer: order.farmer._id.toString(),
+      user: req.user.id
+    });
 
     // Make sure user is the order owner or the farmer
     if (
-      order.buyer.toString() !== req.user.id && 
-      order.farmer.toString() !== req.user.id && 
+      order.buyer._id.toString() !== req.user.id && 
+      order.farmer._id.toString() !== req.user.id && 
       req.user.role !== 'admin'
     ) {
-      return res.status(403).json({ message: 'Not authorized to access this order' });
+      console.log('Permission denied');
+      return res.status(403).json({ 
+        success: false,
+        message: 'Not authorized to access this order' 
+      });
     }
 
     res.status(200).json({
@@ -81,7 +99,11 @@ exports.getOrder = async (req, res) => {
       data: order
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error in getOrder:', error);
+    res.status(400).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -124,13 +146,28 @@ exports.createOrder = async (req, res) => {
       deliveryAddress
     });
 
+    // Populate the order with product data
+    const populatedOrder = await Order.findById(order._id)
+      .populate({
+        path: 'product',
+        select: 'cropName price unit image description'
+      })
+      .populate({
+        path: 'buyer',
+        select: 'name location phone'
+      })
+      .populate({
+        path: 'farmer',
+        select: 'name location phone'
+      });
+
     // Update product quantity
     product.quantity -= quantityOrdered;
     await product.save();
 
     res.status(201).json({
       success: true,
-      data: order
+      data: populatedOrder
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -159,9 +196,24 @@ exports.updateOrderStatus = async (req, res) => {
     order.status = status;
     await order.save();
 
+    // Populate the updated order
+    const populatedOrder = await Order.findById(order._id)
+      .populate({
+        path: 'product',
+        select: 'cropName price unit image description'
+      })
+      .populate({
+        path: 'buyer',
+        select: 'name location phone'
+      })
+      .populate({
+        path: 'farmer',
+        select: 'name location phone'
+      });
+
     res.status(200).json({
       success: true,
-      data: order
+      data: populatedOrder
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -200,9 +252,24 @@ exports.cancelOrder = async (req, res) => {
     product.quantity += order.quantityOrdered;
     await product.save();
 
+    // Populate the updated order
+    const populatedOrder = await Order.findById(order._id)
+      .populate({
+        path: 'product',
+        select: 'cropName price unit image description'
+      })
+      .populate({
+        path: 'buyer',
+        select: 'name location phone'
+      })
+      .populate({
+        path: 'farmer',
+        select: 'name location phone'
+      });
+
     res.status(200).json({
       success: true,
-      data: order
+      data: populatedOrder
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
