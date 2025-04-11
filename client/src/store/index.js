@@ -5,12 +5,14 @@ import authReducer from '../reducers/authReducer';
 import productReducer from '../reducers/productReducer';
 import orderReducer from '../reducers/orderReducer';
 import alertReducer from '../reducers/alertReducer';
+import chatbotReducer from '../components/chatbot/chatbotSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   products: productReducer,
   orders: orderReducer,
-  alert: alertReducer
+  alert: alertReducer,
+  chatbot: chatbotReducer
 });
 
 const initialState = {};

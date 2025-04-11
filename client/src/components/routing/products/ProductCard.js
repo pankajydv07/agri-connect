@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 const ProductCard = ({ product }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <img src={product.image} alt={product.cropName} className="w-full h-48 object-cover" />
+      <img src="https://images.unsplash.com/photo-1511735643442-503bb3bd348a?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHxlbnwwfHwwfHx8MA%3D%3D" alt={product.cropName} className="w-full h-48 object-cover" />
       <div className="p-4">
         <h3 className="text-xl font-semibold mb-2">{product.cropName}</h3>
         <p className="text-gray-600 mb-2">{product.description.substring(0, 100)}...</p>

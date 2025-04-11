@@ -136,11 +136,11 @@ const EditProduct = ({ getProduct, updateProduct, product, loading, match, histo
             accept="image/*"
             className="w-full px-3 py-2 border rounded-md"
           />
-          {product && product.image && (
+          {product && "https://images.unsplash.com/photo-1511735643442-503bb3bd348a?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHxlbnwwfHwwfHx8MA%3D%3D" && (
             <div className="mt-2">
               <p className="text-sm text-gray-500">Current image:</p>
               <img 
-                src={product.image} 
+                src="https://images.unsplash.com/photo-1511735643442-503bb3bd348a?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHxlbnwwfHwwfHx8MA%3D%3D" 
                 alt={product.cropName} 
                 className="h-24 mt-1 rounded"
               />

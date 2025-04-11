@@ -182,10 +182,7 @@ exports.deleteProduct = async (req, res) => {
     }
 
     // Delete image from Cloudinary if exists
-    if (product.image && product.image !== 'no-photo.jpg') {
-      const publicId = product.image.split('/').pop().split('.')[0];
-      await cloudinary.uploader.destroy(`agri-connect/products/${publicId}`);
-    }
+  
 
     // Delete product using findByIdAndDelete
     await Product.findByIdAndDelete(req.params.id);

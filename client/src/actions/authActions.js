@@ -88,6 +88,62 @@ export const login = (email, password) => async dispatch => {
   }
 };
 
+// Update profile
+export const updateProfile = (formData) => async dispatch => {
+  try {
+    const config = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const res = await axios.put('/api/auth/profile', formData, config);
+
+    dispatch({
+      type: USER_LOADED,
+      payload: res.data.data
+    });
+
+    dispatch(setAlert('Profile Updated', 'success'));
+  } catch (err) {
+    const errors = err.response.data.message;
+
+    if (errors) {
+      dispatch(setAlert(errors, 'danger'));
+    }
+
+    dispatch({
+      type: AUTH_ERROR
+    });
+  }
+};
+
+// Change password
+export const changePassword = (passwordData) => async dispatch => {
+  try {
+    const config = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    await axios.put('/api/auth/change-password', passwordData, config);
+
+    dispatch(setAlert('Password Changed Successfully', 'success'));
+    
+    return true;
+  } catch (err) {
+    const errors = err.response.data.message;
+
+    if (errors) {
+      dispatch(setAlert(errors, 'danger'));
+    }
+    
+    return false;
+  }
+};
+
+
 // Logout
 export const logout = () => dispatch => {
   dispatch({ type: LOGOUT });

@@ -35,7 +35,7 @@ const ProductDetail = ({ getProduct, createOrder, product, loading, match, histo
       <h1 className="text-3xl font-bold mb-4">{product.cropName}</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <img src={product.image} alt={product.cropName} className="w-full rounded-lg shadow-md" />
+          <img src="https://images.unsplash.com/photo-1511735643442-503bb3bd348a?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHxlbnwwfHwwfHx8MA%3D%3D" alt={product.cropName} className="w-full rounded-lg shadow-md" />
         </div>
         <div>
           <p className="text-gray-600 mb-4">{product.description}</p>

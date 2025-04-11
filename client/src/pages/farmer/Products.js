@@ -33,7 +33,7 @@ const Products = ({ getProducts, deleteProduct, updateProductStatus, product: { 
         {products.map(product => (
           <div key={product._id} className="border rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow">
             <img 
-              src={product.image} 
+              src="https://images.unsplash.com/photo-1511735643442-503bb3bd348a?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHxlbnwwfHwwfHx8MA%3D%3D"
               alt={product.cropName} 
               className="w-full h-48 object-cover rounded-md mb-4"
             />

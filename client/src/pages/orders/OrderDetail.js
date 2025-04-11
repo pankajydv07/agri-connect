@@ -43,21 +43,21 @@ const OrderDetail = ({ getOrder, updateOrderStatus, cancelOrder, order, loading,
             <h2 className="text-xl font-bold mb-4">Product Information</h2>
             <div className="mb-4">
               <img 
-                src={order.product.image} 
-                alt={order.product.cropName} 
+                src="https://images.unsplash.com/photo-1511735643442-503bb3bd348a?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHxlbnwwfHwwfHx8MA%3D%3D"
+                alt={order.product ? order.product.cropName : 'No Image Available'} 
                 className="w-full h-48 object-cover rounded-lg"
               />
             </div>
-            <p className="mb-2"><strong>Product Name:</strong> {order.product.cropName}</p>
-            <p className="mb-2"><strong>Description:</strong> {order.product.description}</p>
-            <p className="mb-2"><strong>Price per Unit:</strong> ${order.product.price.toFixed(2)}</p>
-            <p className="mb-2"><strong>Unit:</strong> {order.product.unit}</p>
+            <p className="mb-2"><strong>Product Name:</strong> {order.product ? order.product.cropName : 'N/A'}</p>
+            <p className="mb-2"><strong>Description:</strong> {order.product ? order.product.description : 'N/A'}</p>
+            <p className="mb-2"><strong>Price per Unit:</strong> {order.product ? `$${order.product.price.toFixed(2)}` : 'N/A'}</p>
+            <p className="mb-2"><strong>Unit:</strong> {order.product ? order.product.unit : 'N/A'}</p>
           </div>
           
           <div>
             <h2 className="text-xl font-bold mb-4">Order Information</h2>
             <p className="mb-2"><strong>Order ID:</strong> {order._id}</p>
-            <p className="mb-2"><strong>Quantity Ordered:</strong> {order.quantityOrdered} {order.product.unit}</p>
+            <p className="mb-2"><strong>Quantity Ordered:</strong> {order.product ? `${order.quantityOrdered} ${order.product.unit}` : 'N/A'}</p>
             <p className="mb-2"><strong>Total Price:</strong> ${order.totalPrice.toFixed(2)}</p>
             <p className="mb-2"><strong>Status:</strong> {order.status}</p>
             <p className="mb-2"><strong>Delivery Address:</strong> {order.deliveryAddress}</p>

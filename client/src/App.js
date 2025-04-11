@@ -1,3 +1,5 @@
+// src/App.js - Update your existing App.js file
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -10,6 +12,7 @@ import Navbar from './components/layout/Navbar';
 import Alert from './components/layout/Alert';
 import PrivateRoute from './components/routing/PrivateRoute';
 import RoleRoute from './components/routing/RoleRoute';
+import ChatbotWidget from './components/chatbot/ChatbotWidget'; // Add this import
 
 // Pages
 import Home from './pages/Home';
@@ -23,6 +26,7 @@ import EditProduct from './pages/farmer/EditProduct';
 import BuyerDashboard from './pages/buyer/BuyerDashboard';
 import OrderDetail from './pages/orders/OrderDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import Profile from './pages/profile/Profile';
 import NotFound from './pages/NotFound';
 
 // Check for token in localStorage
@@ -49,6 +53,7 @@ const App = () => {
               <Route exact path="/marketplace" component={Marketplace} />
               <Route exact path="/products/:id" component={ProductDetail} />
               
+              <PrivateRoute exact path="/profile" component={Profile} />
               <PrivateRoute exact path="/orders/:id" component={OrderDetail} />
               
               <RoleRoute 
@@ -87,6 +92,9 @@ const App = () => {
               <Route component={NotFound} />
             </Switch>
           </div>
+          
+          {/* Add the ChatbotWidget component */}
+          <ChatbotWidget />
         </div>
       </Router>
     </Provider>
