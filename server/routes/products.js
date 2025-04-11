@@ -1,23 +1,30 @@
 const express = require('express');
-const { 
-  getProducts, 
-  getProduct, 
-  createProduct, 
-  updateProduct, 
-  deleteProduct 
-} = require('../controllers/products');
 const { protect, authorize } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const {
+  getProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  updateProductStatus
+} = require('../controllers/products');
+const upload = require('../middleware/multer');
 
 const router = express.Router();
 
-router.route('/')
+router
+  .route('/')
   .get(getProducts)
-  .post(protect, authorize('farmer', 'admin'), upload.single('image'), createProduct);
+  .post(protect, authorize('farmer'), upload.single('image'), createProduct);
 
-router.route('/:id')
+router
+  .route('/:id')
   .get(getProduct)
-  .put(protect, authorize('farmer', 'admin'), upload.single('image'), updateProduct)
-  .delete(protect, authorize('farmer', 'admin'), deleteProduct);
+  .put(protect, authorize('farmer'), upload.single('image'), updateProduct)
+  .delete(protect, authorize('farmer'), deleteProduct);
+
+router
+  .route('/:id/status')
+  .put(protect, authorize('farmer'), updateProductStatus);
 
 module.exports = router;

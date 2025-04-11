@@ -124,3 +124,28 @@ export const deleteProduct = id => async dispatch => {
 export const clearProduct = () => dispatch => {
   dispatch({ type: CLEAR_PRODUCT });
 };
+
+// Update product status
+export const updateProductStatus = (id, status) => async dispatch => {
+  try {
+    const config = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const res = await axios.put(`/api/products/${id}/status`, { status }, config);
+
+    dispatch({
+      type: UPDATE_PRODUCT,
+      payload: res.data.data
+    });
+
+    dispatch(setAlert('Product status updated', 'success'));
+  } catch (err) {
+    dispatch({
+      type: PRODUCT_ERROR,
+      payload: { msg: err.response.data.message, status: err.response.status }
+    });
+  }
+};

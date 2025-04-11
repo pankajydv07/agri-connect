@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const User = require('../models/User');
+const cloudinary = require('../utils/cloudinary');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -115,6 +116,14 @@ exports.createProduct = async (req, res) => {
       return res.status(403).json({ message: 'Only farmers can add products' });
     }
 
+    // Upload image to Cloudinary if present
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'agri-connect/products'
+      });
+      req.body.image = result.secure_url;
+    }
+
     const product = await Product.create(req.body);
 
     res.status(201).json({
@@ -172,7 +181,14 @@ exports.deleteProduct = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this product' });
     }
 
-    await product.remove();
+    // Delete image from Cloudinary if exists
+    if (product.image && product.image !== 'no-photo.jpg') {
+      const publicId = product.image.split('/').pop().split('.')[0];
+      await cloudinary.uploader.destroy(`agri-connect/products/${publicId}`);
+    }
+
+    // Delete product using findByIdAndDelete
+    await Product.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -185,3 +201,32 @@ exports.deleteProduct = async (req, res) => {
 
 // @desc    Get farmer products
 // @route
+
+// @desc    Update product status
+// @route   PUT /api/products/:id/status
+// @access  Private (Farmers only)
+exports.updateProductStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    let product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Make sure user is the product owner
+    if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to update this product' });
+    }
+
+    product.status = status;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};

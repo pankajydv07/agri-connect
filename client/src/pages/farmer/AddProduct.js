@@ -19,17 +19,28 @@ const AddProduct = ({ addProduct, history }) => {
   const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const onFileChange = e => {
-    console.log('File selected:', e.target.files[0]);
-    setFormData({ ...formData, image: e.target.files[0] });
+    if (e.target.files[0]) {
+      setFormData({ ...formData, image: e.target.files[0] });
+    }
   };
-  
 
   const onSubmit = e => {
     e.preventDefault();
     const productData = new FormData();
-    for (const key in formData) {
-      productData.append(key, formData[key]);
+    
+    // Append all form fields
+    productData.append('cropName', cropName);
+    productData.append('description', description);
+    productData.append('quantity', quantity);
+    productData.append('unit', unit);
+    productData.append('price', price);
+    productData.append('availableUntil', availableUntil);
+    
+    // Append image if present
+    if (formData.image) {
+      productData.append('image', formData.image);
     }
+
     addProduct(productData, history);
   };
 

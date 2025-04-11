@@ -30,6 +30,11 @@ const ProductSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Please add availability date']
   },
+  status: {
+    type: String,
+    enum: ['Available', 'Out of Stock', 'Coming Soon'],
+    default: 'Available'
+  },
   farmer: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
