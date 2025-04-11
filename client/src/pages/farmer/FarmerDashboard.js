@@ -9,9 +9,11 @@ import OrderList from '../../components/orders/OrderList';
 
 const FarmerDashboard = ({ getProducts, getOrders, products, orders, loading, user }) => {
   useEffect(() => {
-    getProducts();
-    getOrders();
-  }, [getProducts, getOrders]);
+    if (user && user._id) {
+      getProducts(`?farmer=${user._id}`);
+      getOrders();
+    }
+  }, [getProducts, getOrders, user]);
 
   const totalEarnings = orders
     .filter(order => order.status === 'Delivered')

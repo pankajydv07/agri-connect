@@ -63,6 +63,20 @@ const OrderDetail = ({ getOrder, updateOrderStatus, cancelOrder, order, loading,
             <p className="mb-2"><strong>Delivery Address:</strong> {order.deliveryAddress}</p>
             <p className="mb-4"><strong>Order Date:</strong> {new Date(order.createdAt).toLocaleString()}</p>
 
+            <div className="mb-4">
+              <h2 className="text-xl font-bold mb-2">Buyer Information</h2>
+              <p className="mb-2"><strong>Name:</strong> {order.buyer.name}</p>
+              <p className="mb-2"><strong>Location:</strong> {order.buyer.location}</p>
+              <p className="mb-2"><strong>Phone:</strong> {order.buyer.phone}</p>
+            </div>
+
+            <div className="mb-4">
+              <h2 className="text-xl font-bold mb-2">Seller Information</h2>
+              <p className="mb-2"><strong>Name:</strong> {order.farmer.name}</p>
+              <p className="mb-2"><strong>Location:</strong> {order.farmer.location}</p>
+              <p className="mb-2"><strong>Phone:</strong> {order.farmer.phone}</p>
+            </div>
+
             {auth.user.role === 'farmer' && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
               <div className="mb-4">
                 <h2 className="text-xl font-bold mb-2">Update Order Status</h2>
