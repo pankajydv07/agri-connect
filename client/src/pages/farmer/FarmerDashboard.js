@@ -73,7 +73,7 @@ const FarmerDashboard = ({ getProducts, getOrders, products, orders, loading, us
             </div>
           </div>
           <div className="px-5 py-4">
-            <p className="text-3xl font-bold text-gray-800">${totalEarnings.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-800">₹{totalEarnings.toFixed(2)}</p>
             <p className="text-sm text-gray-500 mt-1">Revenue from delivered orders</p>
           </div>
         </div>

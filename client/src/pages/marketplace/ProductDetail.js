@@ -39,7 +39,7 @@ const ProductDetail = ({ getProduct, createOrder, product, loading, match, histo
         </div>
         <div>
           <p className="text-gray-600 mb-4">{product.description}</p>
-          <p className="text-xl font-bold mb-2">${product.price.toFixed(2)} / {product.unit}</p>
+          <p className="text-xl font-bold mb-2">₹{product.price.toFixed(2)} / {product.unit}</p>
           <p className="mb-2">Available Quantity: {product.quantity} {product.unit}</p>
           <p className="mb-4">Available until: {new Date(product.availableUntil).toLocaleDateString()}</p>
           <form onSubmit={onSubmit}>

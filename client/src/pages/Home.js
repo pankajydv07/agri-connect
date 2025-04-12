@@ -2,8 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const Home = ({ isAuthenticated, user }) => {
+  const { t } = useTranslation();
+  
   // Features data for the animation
   const features = [
     {
@@ -13,8 +16,8 @@ const Home = ({ isAuthenticated, user }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
         </svg>
       ),
-      title: 'Fresh Produce',
-      description: 'Always get the freshest produce directly from local farms to your table.'
+      title: t('home.freshProduce'),
+      description: t('home.freshProduceDesc')
     },
     {
       id: 2,
@@ -23,8 +26,8 @@ const Home = ({ isAuthenticated, user }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
-      title: 'Fair Pricing',
-      description: 'Farmers earn more while consumers pay less by eliminating middlemen.'
+      title: t('home.fairPricing'),
+      description: t('home.fairPricingDesc')
     },
     {
       id: 3,
@@ -33,8 +36,8 @@ const Home = ({ isAuthenticated, user }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      title: 'Community Growth',
-      description: 'Building stronger agricultural communities through direct connections.'
+      title: t('home.communityGrowth'),
+      description: t('home.communityGrowthDesc')
     },
     {
       id: 4,
@@ -43,8 +46,8 @@ const Home = ({ isAuthenticated, user }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       ),
-      title: 'Quality Assurance',
-      description: 'All products verified to ensure high quality and food safety standards.'
+      title: t('home.qualityAssurance'),
+      description: t('home.qualityAssuranceDesc')
     },
     {
       id: 5,
@@ -53,8 +56,8 @@ const Home = ({ isAuthenticated, user }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      title: 'Convenient Delivery',
-      description: 'Schedule deliveries that work with your timeline and location.'
+      title: t('home.convenientDelivery'),
+      description: t('home.convenientDeliveryDesc')
     },
     {
       id: 6,
@@ -63,8 +66,8 @@ const Home = ({ isAuthenticated, user }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
         </svg>
       ),
-      title: 'Transparent Sourcing',
-      description: 'Know exactly where your food comes from and how it was grown.'
+      title: t('home.transparentSourcing'),
+      description: t('home.transparentSourcingDesc')
     }
   ];
 
@@ -124,18 +127,18 @@ const Home = ({ isAuthenticated, user }) => {
         <div className="absolute inset-0 flex items-center z-10 px-8 md:px-16">
           <div className="max-w-2xl">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white">
-              Welcome to <span className="text-green-400">AgriConnect</span>
+              {t('home.welcome')} <span className="text-green-400">{t('common.appName')}</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-200 max-w-xl leading-relaxed mb-8">
-              Empowering agriculture through direct connections between farmers and buyers
+              {t('home.empowering')}
             </p>
             {!isAuthenticated ? (
               <div className="space-y-4 md:space-y-0 md:space-x-6">
                 <Link to="/register" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1">
-                  Get Started
+                  {t('common.getStarted')}
                 </Link>
                 <Link to="/login" className="inline-block bg-white border-2 border-blue-500 text-blue-500 hover:bg-blue-50 font-bold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1">
-                  Sign In
+                  {t('common.signIn')}
                 </Link>
               </div>
             ) : (
@@ -146,7 +149,7 @@ const Home = ({ isAuthenticated, user }) => {
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                       </svg>
-                      Farmer Dashboard
+                      {t('home.farmerDashboard')}
                     </span>
                   </Link>
                 )}
@@ -156,7 +159,7 @@ const Home = ({ isAuthenticated, user }) => {
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                       </svg>
-                      Buyer Dashboard
+                      {t('home.buyerDashboard')}
                     </span>
                   </Link>
                 )}
@@ -166,7 +169,7 @@ const Home = ({ isAuthenticated, user }) => {
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                       </svg>
-                      Admin Dashboard
+                      {t('home.adminDashboard')}
                     </span>
                   </Link>
                 )}
@@ -185,8 +188,8 @@ const Home = ({ isAuthenticated, user }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">Fresh Produce</h2>
-            <p className="text-gray-600 text-center">Get access to high-quality, locally sourced agricultural products directly from farmers.</p>
+            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">{t('home.freshProduce')}</h2>
+            <p className="text-gray-600 text-center">{t('home.freshProduceDesc')}</p>
           </div>
           
           <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border-t-4 border-blue-500">
@@ -195,8 +198,8 @@ const Home = ({ isAuthenticated, user }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">Fair Pricing</h2>
-            <p className="text-gray-600 text-center">Eliminate middlemen and support farmers with fair prices while getting better deals.</p>
+            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">{t('home.fairPricing')}</h2>
+            <p className="text-gray-600 text-center">{t('home.fairPricingDesc')}</p>
           </div>
           
           <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border-t-4 border-yellow-500">
@@ -205,8 +208,8 @@ const Home = ({ isAuthenticated, user }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">Community Growth</h2>
-            <p className="text-gray-600 text-center">Support local agricultural communities and foster sustainable farming practices.</p>
+            <h2 className="text-xl font-bold text-gray-800 mb-2 text-center">{t('home.communityGrowth')}</h2>
+            <p className="text-gray-600 text-center">{t('home.communityGrowthDesc')}</p>
           </div>
         </div>
       </div>
@@ -215,7 +218,7 @@ const Home = ({ isAuthenticated, user }) => {
       <div className="w-full bg-green-50 py-20 px-4 mb-24">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">
-            From <span className="text-green-600">Farm to Table</span>
+            <span className="text-green-600">{t('home.fromFarmToTable')}</span>
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -226,8 +229,8 @@ const Home = ({ isAuthenticated, user }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-2">Farmers Register</h3>
-              <p className="text-gray-600">Farmers sign up and list their available produce with details and pricing.</p>
+              <h3 className="text-xl font-bold mb-2">{t('home.farmersRegister')}</h3>
+              <p className="text-gray-600">{t('home.farmersRegisterDesc')}</p>
             </div>
             
             <div className="flex flex-col items-center text-center">
@@ -237,8 +240,8 @@ const Home = ({ isAuthenticated, user }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-2">Buyers Browse</h3>
-              <p className="text-gray-600">Buyers explore the marketplace and select fresh produce from local farmers.</p>
+              <h3 className="text-xl font-bold mb-2">{t('home.buyersBrowse')}</h3>
+              <p className="text-gray-600">{t('home.buyersBrowseDesc')}</p>
             </div>
             
             <div className="flex flex-col items-center text-center">
@@ -248,8 +251,8 @@ const Home = ({ isAuthenticated, user }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-2">Order Confirmation</h3>
-              <p className="text-gray-600">Orders are confirmed and farmers prepare the produce for delivery or pickup.</p>
+              <h3 className="text-xl font-bold mb-2">{t('home.orderConfirmation')}</h3>
+              <p className="text-gray-600">{t('home.orderConfirmationDesc')}</p>
             </div>
             
             <div className="flex flex-col items-center text-center">
@@ -259,8 +262,8 @@ const Home = ({ isAuthenticated, user }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-2">Fresh Delivery</h3>
-              <p className="text-gray-600">Buyers receive fresh produce directly from local farms to their table.</p>
+              <h3 className="text-xl font-bold mb-2">{t('home.freshDelivery')}</h3>
+              <p className="text-gray-600">{t('home.freshDeliveryDesc')}</p>
             </div>
           </div>
         </div>
@@ -269,7 +272,7 @@ const Home = ({ isAuthenticated, user }) => {
       {/* Horizontal Scrolling Features Section */}
       <div className="w-full mb-24">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 text-gray-800">
-          Why Choose <span className="text-green-600">AgriConnect</span>
+          {t('home.whyChoose')} <span className="text-green-600">{t('common.appName')}</span>
         </h2>
         
         <div className="relative w-full overflow-hidden py-4">
@@ -327,16 +330,16 @@ const Home = ({ isAuthenticated, user }) => {
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="relative z-20 max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">Ready to Transform Your Agricultural Business?</h2>
-          <p className="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">Join AgriConnect today and be part of the agricultural revolution that benefits farmers, buyers, and communities.</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">{t('home.readyToTransform')}</h2>
+          <p className="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">{t('home.joinAgriConnect')}</p>
           <Link to="/register" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1 text-lg">
-            Join Us Today
+            {t('common.joinUs')}
           </Link>
         </div>
       </div>
       
       <div className="mt-20 text-center">
-        <p className="text-gray-500">&copy; {new Date().getFullYear()} AgriConnect - Transforming agricultural commerce</p>
+        <p className="text-gray-500">{t('common.copyright', { year: new Date().getFullYear() })}</p>
       </div>
     </div>
   );

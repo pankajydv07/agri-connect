@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaRobot, FaTimes, FaPaperPlane, FaMicrophone, FaStop } from 'react-icons/fa';
+import { FaTimes, FaPaperPlane, FaMicrophone, FaStop, FaLeaf, FaSeedling } from 'react-icons/fa';
 import { connect } from 'react-redux';
 import OpenAI from 'openai';
 import ReactMarkdown from 'react-markdown';
 import { addProduct } from '../../actions/productActions';
 import { ELEVENLABS_API_KEY, ASSEMBLYAI_API_KEY } from '../../config/apiKeys';
+import { useTranslation } from 'react-i18next';
 import './Chatbot.css';
 
 const Chatbot = ({ auth, addProduct }) => {
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hello! I\'m your AgriConnect assistant. How can I help you today?' }
+    { role: 'assistant', content: t('chatbot.greeting') }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,9 +29,14 @@ const Chatbot = ({ auth, addProduct }) => {
   const recordingTimeoutRef = useRef(null);
   const audioRef = useRef(null);
 
+  // Update greeting message when language changes
+  useEffect(() => {
+    setMessages([{ role: 'assistant', content: t('chatbot.greeting') }]);
+  }, [i18n.language, t]);
+
   // Initialize OpenAI client
   const client = new OpenAI({
-    apiKey: "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",
+    apiKey: "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",
     baseURL: "https://models.inference.ai.azure.com",
     dangerouslyAllowBrowser: true
   });
@@ -602,7 +609,7 @@ const Chatbot = ({ auth, addProduct }) => {
         onClick={toggleChat}
         aria-label="Chat with AgriConnect Assistant"
       >
-        {isOpen ? <FaTimes /> : <FaRobot />}
+        {isOpen ? <FaTimes /> : <FaSeedling />}
       </button>
       
       {/* Chat window */}

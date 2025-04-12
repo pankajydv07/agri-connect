@@ -30,7 +30,7 @@ const OrderList = ({ orders, loading }) => {
               <td className="border px-4 py-2">{order._id}</td>
               <td className="border px-4 py-2">{order.product ? order.product.cropName : 'N/A'}</td>
               <td className="border px-4 py-2">{order.product ? `${order.quantityOrdered} ${order.product.unit}` : 'N/A'}</td>
-              <td className="border px-4 py-2">${order.totalPrice.toFixed(2)}</td>
+              <td className="border px-4 py-2">₹{order.totalPrice.toFixed(2)}</td>
               <td className="border px-4 py-2">{order.status}</td>
               <td className="border px-4 py-2">
                 <Link to={`/orders/${order._id}`} className="text-blue-500 hover:underline">

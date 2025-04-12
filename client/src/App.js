@@ -7,6 +7,9 @@ import store from './store';
 import setAuthToken from './utils/setAuthToken';
 import { loadUser } from './actions/authActions';
 
+// Import i18n
+import './i18n';
+
 // Components
 import Navbar from './components/layout/Navbar';
 import Alert from './components/layout/Alert';
@@ -27,6 +30,7 @@ import BuyerDashboard from './pages/buyer/BuyerDashboard';
 import OrderDetail from './pages/orders/OrderDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Profile from './pages/profile/Profile';
+import OrganicFarming from './pages/organic/OrganicFarming';
 import NotFound from './pages/NotFound';
 
 // Check for token in localStorage
@@ -53,6 +57,7 @@ const App = () => {
               <Route exact path="/login" component={Login} />
               <Route exact path="/marketplace" component={Marketplace} />
               <Route exact path="/products/:id" component={ProductDetail} />
+              <Route exact path="/organic-farming" component={OrganicFarming} />
               
               <PrivateRoute exact path="/profile" component={Profile} />
               <PrivateRoute exact path="/orders/:id" component={OrderDetail} />

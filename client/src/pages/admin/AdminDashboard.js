@@ -34,7 +34,7 @@ const AdminDashboard = ({ getUsers, getStats, users, stats, loading }) => {
             </div>
             <div className="bg-white p-4 rounded shadow">
               <h2 className="text-xl font-semibold mb-2">Total Sales</h2>
-              <p className="text-3xl font-bold">${stats.totalSales.toFixed(2)}</p>
+              <p className="text-3xl font-bold">₹{stats.totalSales.toFixed(2)}</p>
             </div>
           </div>
           <div>

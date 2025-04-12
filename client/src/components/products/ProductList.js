@@ -30,7 +30,7 @@ const ProductList = ({ products, loading, deleteProduct, user }) => {
             <tr key={product._id}>
               <td className="border px-4 py-2">{product.cropName}</td>
               <td className="border px-4 py-2">{product.quantity} {product.unit}</td>
-              <td className="border px-4 py-2">${product.price.toFixed(2)}</td>
+              <td className="border px-4 py-2">₹{product.price.toFixed(2)}</td>
               <td className="border px-4 py-2">{new Date(product.availableUntil).toLocaleDateString()}</td>
               <td className="border px-4 py-2">
                 <Link to={`/products/${product._id}`} className="text-blue-500 hover:underline mr-2">

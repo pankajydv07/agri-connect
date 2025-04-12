@@ -18,7 +18,7 @@ const ProductCard = ({ product }) => {
           {product.description && product.description.length > 100 ? '...' : ''}
         </p>
         <p className="text-lg font-bold mb-2">
-          ${product.price ? product.price.toFixed(2) : '0.00'} / {product.unit}
+          ₹{product.price ? product.price.toFixed(2) : '0.00'} / {product.unit}
         </p>
         <p className="text-sm text-gray-500 mb-4">
           Available until: {product.availableUntil ? new Date(product.availableUntil).toLocaleDateString() : 'N/A'}
