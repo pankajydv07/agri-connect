@@ -12,7 +12,7 @@ import Navbar from './components/layout/Navbar';
 import Alert from './components/layout/Alert';
 import PrivateRoute from './components/routing/PrivateRoute';
 import RoleRoute from './components/routing/RoleRoute';
-import ChatbotWidget from './components/chatbot/ChatbotWidget'; // Add this import
+import Chatbot from './components/chatbot/Chatbot';
 
 // Pages
 import Home from './pages/Home';
@@ -44,6 +44,7 @@ const App = () => {
       <Router>
         <div className="min-h-screen bg-gray-100">
           <Navbar />
+          <Chatbot />
           <div className="container mx-auto px-4 py-8">
             <Alert />
             <Switch>
@@ -93,11 +94,11 @@ const App = () => {
             </Switch>
           </div>
           
-          {/* Add the ChatbotWidget component */}
-          <ChatbotWidget />
+          
         </div>
       </Router>
     </Provider>
+    
   );
 };
 

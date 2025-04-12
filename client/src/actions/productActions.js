@@ -50,31 +50,15 @@ export const getProduct = id => async dispatch => {
 };
 
 // Add new product
-// src/actions/productActions.js - Add this function to your existing file
-
-// Add product (modified to work with chatbot function calling)
 export const addProduct = (formData) => async dispatch => {
   try {
-    let productData;
-    
-    // Handle both FormData objects (from form) and plain objects (from chatbot)
-    if (formData instanceof FormData) {
-      productData = formData;
-    } else {
-      // Convert plain object to FormData
-      productData = new FormData();
-      for (const key in formData) {
-        productData.append(key, formData[key]);
-      }
-    }
-
     const config = {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     };
 
-    const res = await axios.post('/api/products', productData, config);
+    const res = await axios.post('/api/products', formData, config);
 
     dispatch({
       type: ADD_PRODUCT,
@@ -82,20 +66,13 @@ export const addProduct = (formData) => async dispatch => {
     });
 
     dispatch(setAlert('Product Added', 'success'));
-    
-    return { success: true, product: res.data.data };
   } catch (err) {
     dispatch({
       type: PRODUCT_ERROR,
       payload: { msg: err.response.data.message, status: err.response.status }
     });
-    
-    dispatch(setAlert(err.response.data.message || 'Error adding product', 'danger'));
-    
-    return { success: false, error: err.response.data.message || 'Error adding product' };
   }
 };
-
 
 // Update product
 export const updateProduct = (id, formData) => async dispatch => {
