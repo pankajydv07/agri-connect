@@ -1,48 +1,85 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FaTimes, FaPaperPlane, FaMicrophone, FaStop, FaLeaf, FaSeedling } from 'react-icons/fa';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { FaTimes, FaSeedling } from 'react-icons/fa';
 import { connect } from 'react-redux';
-import OpenAI from 'openai';
-import ReactMarkdown from 'react-markdown';
-import { addProduct } from '../../actions/productActions';
-import { ELEVENLABS_API_KEY, ASSEMBLYAI_API_KEY } from '../../config/apiKeys';
 import { useTranslation } from 'react-i18next';
+import { 
+  addProduct, 
+  updateProduct, 
+  deleteProduct, 
+  getProducts 
+} from '../../actions/productActions';
+import { 
+  createOrder, 
+  getOrder, 
+  getOrders 
+} from '../../actions/orderActions';
+import { ELEVENLABS_API_KEY, ASSEMBLYAI_API_KEY } from '../../config/apiKeys';
+import { 
+  RECORDING_TIMEOUT, 
+  VOICE_ID, 
+  MAX_SPEECH_LENGTH,
+  SYSTEM_PROMPT,
+  FUNCTION_DEFINITIONS 
+} from './ChatbotConfig';
+import { 
+  useOpenAI, 
+  useSpeechToText, 
+  useTextToSpeech, 
+  useChatMessages,
+  useFunctionCalling 
+} from './ChatbotHooks';
+import { ChatMessageList, ChatInputForm } from './ChatbotComponents';
 import './Chatbot.css';
+import axios from 'axios';
 
-const Chatbot = ({ auth, addProduct }) => {
+const Chatbot = ({ 
+  auth, 
+  addProduct, 
+  updateProduct,
+  deleteProduct,
+  getProducts, 
+  createOrder, 
+  getOrder,
+  getOrders 
+}) => {
   const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: t('chatbot.greeting') }
-  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentSpeakingIndex, setCurrentSpeakingIndex] = useState(null);
-  const [recordingTimer, setRecordingTimer] = useState(0);
   
   const messagesEndRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const recordingTimerRef = useRef(null);
-  const recordingTimeoutRef = useRef(null);
-  const audioRef = useRef(null);
 
-  // Update greeting message when language changes
-  useEffect(() => {
-    setMessages([{ role: 'assistant', content: t('chatbot.greeting') }]);
-  }, [i18n.language, t]);
+  // Get user role for personalized experience
+  const userRole = auth.isAuthenticated ? auth.user?.role : 'guest';
 
   // Initialize OpenAI client
-  const client = new OpenAI({
-    apiKey: "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",
-    baseURL: "https://models.inference.ai.azure.com",
-    dangerouslyAllowBrowser: true
-  });
+  const { generateResponse } = useOpenAI(
+    "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",
+"https://models.inference.ai.azure.com"
+  );
+
+  // Create a personalized system prompt by replacing the role placeholder
+  const personalizedSystemPrompt = useMemo(() => {
+    let roleDescription;
+    
+    if (!auth.isAuthenticated) {
+      roleDescription = 'not logged in';
+    } else if (auth.user?.role === 'farmer') {
+      roleDescription = 'a farmer';
+    } else if (auth.user?.role === 'buyer') {
+      roleDescription = 'a buyer';
+    } else if (auth.user?.role === 'admin') {
+      roleDescription = 'an admin';
+    } else {
+      roleDescription = 'not logged in';
+    }
+    
+    return SYSTEM_PROMPT.replace('{{ROLE}}', roleDescription);
+  }, [auth.isAuthenticated, auth.user?.role]);
 
   // Define available functions for the AI
-  const availableFunctions = {
+  const availableFunctions = useMemo(() => ({
+    // FARMER FUNCTIONS
     addProduct: async (args) => {
       if (!auth.isAuthenticated || auth.user?.role !== 'farmer') {
         return { success: false, message: 'Only authenticated farmers can add products' };
@@ -71,42 +108,435 @@ const Chatbot = ({ auth, addProduct }) => {
           message: 'Failed to add the product. Please try again.' 
         };
       }
-    }
-  };
+    },
 
-  // Define the function schemas for OpenAI
-  const functionDefinitions = [
-    {
-      name: 'addProduct',
-      description: 'Add a new agricultural product to the farmer\'s inventory',
-      parameters: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string',
-            description: 'The name of the crop or product'
-          },
-          description: {
-            type: 'string',
-            description: 'A detailed description of the product'
-          },
-          price: {
-            type: 'string',
-            description: 'The price per unit of the product'
-          },
-          quantity: {
-            type: 'string',
-            description: 'The available quantity of the product'
-          },
-          unit: {
-            type: 'string',
-            description: 'The unit of measurement (e.g., kg, ton, pieces, etc.)'
-          }
-        },
-        required: ['name', 'description', 'price', 'quantity', 'unit']
+    updateProduct: async (args) => {
+      if (!auth.isAuthenticated || auth.user?.role !== 'farmer') {
+        return { success: false, message: 'Only authenticated farmers can update products' };
+      }
+      
+      try {
+        const productId = args.productId;
+        
+        // Create an object with only the fields that were provided
+        const updateData = {};
+        if (args.name) updateData.cropName = args.name;
+        if (args.description) updateData.description = args.description;
+        if (args.price) updateData.price = parseFloat(args.price);
+        if (args.quantity) updateData.quantity = parseInt(args.quantity);
+        if (args.unit) updateData.unit = args.unit;
+        
+        // Don't make an API call if no fields were provided to update
+        if (Object.keys(updateData).length === 0) {
+          return { 
+            success: false, 
+            message: 'No fields provided for update. Please specify at least one field to update.' 
+          };
+        }
+        
+        await updateProduct(productId, updateData);
+        
+        return { 
+          success: true, 
+          message: `Successfully updated product with ID: ${productId}` 
+        };
+      } catch (error) {
+        console.error('Error updating product:', error);
+        return { 
+          success: false, 
+          message: 'Failed to update the product. Please check the product ID and try again.' 
+        };
+      }
+    },
+
+    deleteProduct: async (args) => {
+      if (!auth.isAuthenticated || auth.user?.role !== 'farmer') {
+        return { success: false, message: 'Only authenticated farmers can delete products' };
+      }
+      
+      try {
+        const productId = args.productId;
+        const confirmDelete = args.confirmDelete;
+        
+        // Double check confirmation to prevent accidental deletion
+        if (!confirmDelete) {
+          return {
+            success: false,
+            message: 'Product deletion requires confirmation. Please confirm that you want to delete this product.'
+          };
+        }
+        
+        await deleteProduct(productId);
+        
+        return { 
+          success: true, 
+          message: `Successfully deleted product with ID: ${productId}` 
+        };
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        return { 
+          success: false, 
+          message: 'Failed to delete the product. Please check the product ID and try again.' 
+        };
+      }
+    },
+
+    getFarmerOrders: async (args) => {
+      if (!auth.isAuthenticated || auth.user?.role !== 'farmer') {
+        return { success: false, message: 'Only authenticated farmers can view their orders' };
+      }
+      
+      try {
+        // Create a query string for filtered search if parameters are provided
+        const queryParams = [];
+        
+        if (args.status) {
+          queryParams.push(`status=${encodeURIComponent(args.status)}`);
+        }
+        
+        if (args.startDate) {
+          queryParams.push(`startDate=${encodeURIComponent(args.startDate)}`);
+        }
+        
+        if (args.endDate) {
+          queryParams.push(`endDate=${encodeURIComponent(args.endDate)}`);
+        }
+        
+        // Add a specific query parameter to get only orders for this farmer's products
+        queryParams.push('farmerView=true');
+        
+        const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+        
+        // Call the API to get orders
+        const response = await axios.get(`/api/orders${queryString}`);
+        
+        // Format orders for chat display
+        if (response.data.data && response.data.data.length > 0) {
+          const orders = response.data.data.map(order => ({
+            id: order._id,
+            product: order.product.cropName,
+            quantity: order.quantity,
+            total: order.totalAmount,
+            status: order.status,
+            buyerName: order.user.name,
+            orderDate: new Date(order.createdAt).toLocaleDateString()
+          }));
+          
+          return {
+            success: true,
+            orders,
+            count: orders.length,
+            message: `Found ${orders.length} orders for your products.`
+          };
+        } else {
+          return {
+            success: true,
+            orders: [],
+            count: 0,
+            message: 'No orders found matching your criteria.'
+          };
+        }
+      } catch (error) {
+        console.error('Error getting farmer orders:', error);
+        return { 
+          success: false, 
+          message: 'Failed to retrieve orders. Please try again.' 
+        };
+      }
+    },
+
+    getFarmingTips: async (args) => {
+      try {
+        // Create a query for farming tips
+        let query = "organic farming tips";
+        
+        if (args.cropType) {
+          query += ` for ${args.cropType}`;
+        }
+        
+        if (args.season) {
+          query += ` in ${args.season} season`;
+        }
+        
+        if (args.challenge) {
+          query += ` for ${args.challenge}`;
+        }
+        
+        // Use the OpenAI API directly for this to get dynamic farming advice
+        const response = await generateResponse([
+          { role: 'system', content: 'You are an agricultural expert specializing in organic farming. Provide practical, actionable advice for farmers. Be concise and focus on specific techniques that can be implemented immediately.' },
+          { role: 'user', content: query }
+        ]);
+        
+        const farmingAdvice = response.choices[0].message.content;
+        
+        return {
+          success: true,
+          query,
+          advice: farmingAdvice,
+          message: 'Here are some organic farming tips that might help.'
+        };
+      } catch (error) {
+        console.error('Error getting farming tips:', error);
+        return { 
+          success: false, 
+          message: 'Failed to retrieve farming tips. Please try again.' 
+        };
+      }
+    },
+
+    getWeatherForecast: async (args) => {
+      try {
+        const location = args.location;
+        const days = args.days || 3; // Default to 3-day forecast
+        
+        // Simulate weather forecast with mock data (in production, would use real weather API)
+        const weatherTypes = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain', 'Heavy Rain', 'Thunderstorm'];
+        const forecast = [];
+        
+        const today = new Date();
+        
+        for (let i = 0; i < days; i++) {
+          const forecastDate = new Date();
+          forecastDate.setDate(today.getDate() + i);
+          
+          // Create a deterministic but somewhat random weather based on location and date
+          const locationSeed = location.length;
+          const dateSeed = forecastDate.getDate();
+          const weatherIndex = (locationSeed + dateSeed + i) % weatherTypes.length;
+          
+          // Temperature fluctuates between 18-32°C
+          const minTemp = 18 + ((locationSeed + i) % 7);
+          const maxTemp = minTemp + 5 + (dateSeed % 5);
+          
+          forecast.push({
+            date: forecastDate.toLocaleDateString(),
+            weather: weatherTypes[weatherIndex],
+            minTemp: minTemp,
+            maxTemp: maxTemp,
+            precipitation: weatherIndex > 2 ? (10 + ((weatherIndex - 2) * 15)) + '%' : '0%',
+            humidity: 50 + (weatherIndex * 5) + '%',
+            windSpeed: (5 + (weatherIndex * 2)) + ' km/h'
+          });
+        }
+        
+        return {
+          success: true,
+          location,
+          forecast,
+          message: `Weather forecast for ${location} for the next ${days} days.`
+        };
+      } catch (error) {
+        console.error('Error getting weather forecast:', error);
+        return { 
+          success: false, 
+          message: 'Failed to retrieve weather forecast. Please try again.' 
+        };
+      }
+    },
+
+    // BUYER FUNCTIONS
+    searchProducts: async (args) => {
+      try {
+        // Build the query string from the provided parameters
+        const queryParams = [];
+        
+        if (args.keywords) {
+          queryParams.push(`search=${encodeURIComponent(args.keywords)}`);
+        }
+        
+        if (args.category) {
+          queryParams.push(`category=${encodeURIComponent(args.category)}`);
+        }
+        
+        if (args.minPrice) {
+          queryParams.push(`minPrice=${encodeURIComponent(args.minPrice)}`);
+        }
+        
+        if (args.maxPrice) {
+          queryParams.push(`maxPrice=${encodeURIComponent(args.maxPrice)}`);
+        }
+        
+        const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+        
+        // Get products with the built query string
+        const response = await getProducts(queryString);
+        
+        // Format the products for display in chat
+        const productsResponse = {
+          success: true,
+          products: response?.payload?.data || [],
+          count: response?.payload?.data?.length || 0,
+          message: response?.payload?.data?.length > 0 
+            ? `Found ${response.payload.data.length} products matching your criteria.` 
+            : 'No products found matching your criteria.'
+        };
+        
+        return productsResponse;
+      } catch (error) {
+        console.error('Error searching products:', error);
+        return { 
+          success: false, 
+          message: 'Failed to search for products. Please try again.'
+        };
+      }
+    },
+
+    placeOrder: async (args) => {
+      if (!auth.isAuthenticated || auth.user?.role !== 'buyer') {
+        return { success: false, message: 'Only authenticated buyers can place orders' };
+      }
+      
+      try {
+        const orderData = {
+          product: args.productId,
+          quantity: parseInt(args.quantity),
+          shippingAddress: args.deliveryAddress,
+          requestedDeliveryDate: args.deliveryDate || null
+        };
+        
+        const response = await createOrder(orderData);
+        
+        if (response) {
+          return { 
+            success: true, 
+            orderId: response._id,
+            message: `Order placed successfully! Your order ID is: ${response._id}`
+          };
+        } else {
+          throw new Error('Failed to create order');
+        }
+      } catch (error) {
+        console.error('Error placing order:', error);
+        return { 
+          success: false, 
+          message: 'Failed to place your order. Please try again.'
+        };
+      }
+    },
+
+    trackOrder: async (args) => {
+      if (!auth.isAuthenticated) {
+        return { success: false, message: 'You need to be logged in to track orders' };
+      }
+      
+      try {
+        const response = await getOrder(args.orderId);
+        
+        if (response?.payload) {
+          const order = response.payload;
+          
+          // Format the order status for the chatbot to display
+          return {
+            success: true,
+            order: {
+              id: order._id,
+              status: order.status,
+              product: order.product.cropName,
+              quantity: order.quantity,
+              total: order.totalAmount,
+              placedAt: new Date(order.createdAt).toLocaleDateString(),
+              estimatedDelivery: order.requestedDeliveryDate ? 
+                new Date(order.requestedDeliveryDate).toLocaleDateString() : 
+                'Not specified'
+            },
+            message: `Your order for ${order.quantity} ${order.product.unit} of ${order.product.cropName} is currently ${order.status}.`
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Order not found. Please check the order ID and try again.'
+          };
+        }
+      } catch (error) {
+        console.error('Error tracking order:', error);
+        return { 
+          success: false, 
+          message: 'Failed to track your order. Please try again.'
+        };
       }
     }
-  ];
+  }), [
+    auth, 
+    addProduct, 
+    updateProduct,
+    deleteProduct,
+    getProducts, 
+    createOrder, 
+    getOrder,
+    generateResponse
+  ]);
+
+  // Use custom hooks for managing chat state and functionality
+  const { executeFunction } = useFunctionCalling(availableFunctions);
+  
+  // Get a personalized greeting based on user role
+  const getPersonalizedGreeting = useCallback(() => {
+    if (!auth.isAuthenticated) {
+      return t('chatbot.greeting_guest');
+    } else if (auth.user?.role === 'farmer') {
+      return t('chatbot.greeting_farmer', { name: auth.user.name });
+    } else if (auth.user?.role === 'buyer') {
+      return t('chatbot.greeting_buyer', { name: auth.user.name });
+    } else {
+      return t('chatbot.greeting');
+    }
+  }, [auth.isAuthenticated, auth.user, t]);
+
+  const { 
+    messages, 
+    addUserMessage, 
+    addAssistantMessage, 
+    addToolMessage,
+    updateTemporaryMessage,
+    removeTemporaryMessages
+  } = useChatMessages(getPersonalizedGreeting());
+
+  // Update greeting message when auth state changes
+  useEffect(() => {
+    // Only update if there's just the greeting message
+    if (messages.length === 1 && messages[0].role === 'assistant') {
+      messages[0].content = getPersonalizedGreeting();
+    }
+  }, [auth.isAuthenticated, auth.user, getPersonalizedGreeting, messages]);
+
+  const { 
+    isSpeaking, 
+    currentSpeakingIndex, 
+    speakText, 
+    stopSpeaking 
+  } = useTextToSpeech(ELEVENLABS_API_KEY, VOICE_ID);
+
+  // Speech to text handlers
+  const handleTranscriptionComplete = useCallback((transcriptText) => {
+    if (transcriptText && transcriptText.trim()) {
+      // Replace the temporary message with the transcribed text
+      addUserMessage(transcriptText);
+      // Process the transcribed text with our AI
+      handleAIResponse(transcriptText);
+    } else {
+      removeTemporaryMessages();
+      addAssistantMessage(t('chatbot.transcription_empty'));
+    }
+  }, [addUserMessage, addAssistantMessage, removeTemporaryMessages, t]);
+
+  const handleTranscriptionError = useCallback((error) => {
+    console.error('Transcription error:', error);
+    removeTemporaryMessages();
+    addAssistantMessage(t('chatbot.transcription_error'));
+  }, [removeTemporaryMessages, addAssistantMessage, t]);
+
+  const { 
+    isRecording, 
+    recordingTimer, 
+    transcriptStatus, 
+    startRecording, 
+    stopRecording 
+  } = useSpeechToText(
+    ASSEMBLYAI_API_KEY, 
+    handleTranscriptionComplete, 
+    handleTranscriptionError
+  );
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -115,257 +545,73 @@ const Chatbot = ({ auth, addProduct }) => {
     }
   }, [messages]);
 
-  // Initialize audio context for silence detection
-  useEffect(() => {
-    return () => {
-      // Clean up audio resources when component unmounts
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      clearTimeout(recordingTimeoutRef.current);
-    };
-  }, []);
-
-  // Clean up any audio playing when component unmounts
+  // Clean up function for component unmount
   useEffect(() => {
     return () => {
       stopSpeaking();
     };
-  }, []);
+  }, [stopSpeaking]);
 
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
+  // Update temporary message when transcription status changes
+  useEffect(() => {
+    if (isRecording) {
+      let content = '🎙️ Listening...';
+      
+      if (transcriptStatus === 'processing') {
+        content = '📝 Processing audio...';
+      } else if (transcriptStatus === 'transcribing') {
+        content = '📝 Transcribing...';
+      }
+      
+      updateTemporaryMessage(content);
+    }
+  }, [isRecording, transcriptStatus, updateTemporaryMessage]);
+
+  const toggleChat = useCallback(() => {
+    setIsOpen(prevIsOpen => {
+      if (prevIsOpen) return false;
       // Reset all states when opening chat
       stopSpeaking();
-    }
-  };
+      return true;
+    });
+  }, [stopSpeaking]);
 
-  // Function to stop speaking
-  const stopSpeaking = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsSpeaking(false);
-    setCurrentSpeakingIndex(null);
-  };
-
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     setInput(e.target.value);
-  };
+  }, []);
 
-  // Start voice recording with a simple 10-second timer
-  const startRecording = async () => {
+  // Start voice recording
+  const handleStartRecording = useCallback(async () => {
     try {
-      setIsRecording(true);
-      setRecordingTimer(0);
-      setTranscript('🎙️ Listening...');
-      
-      // Add a temporary recording message
-      const recordingMessage = { 
-        role: 'user', 
-        content: '🎙️ Listening...', 
-        isRecording: true 
-      };
-      setMessages(prevMessages => [...prevMessages, recordingMessage]);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        await sendToAssemblyAI();
-      };
-
-      mediaRecorderRef.current.start(1000); // Collect data in 1-second chunks
-
-      // Start a 10-second timer
-      recordingTimeoutRef.current = setTimeout(() => {
-        stopRecordingAndProcess();
-      }, 10000);
-
-      // Update the timer every second
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingTimer(prevTimer => prevTimer + 1);
-      }, 1000);
+      // Add a temporary recording message to show status
+      updateTemporaryMessage('🎙️ Listening...');
+      // Start recording with timeout
+      await startRecording(RECORDING_TIMEOUT);
     } catch (error) {
       console.error('Error starting recording:', error);
-      setIsRecording(false);
-      setTranscript('');
-      setRecordingTimer(0);
-      
-      // Remove the temporary recording message
-      setMessages(prevMessages => prevMessages.filter(msg => !msg.isRecording));
-      
-      // Add error message
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { role: 'assistant', content: 'Error accessing microphone. Please check permissions and try again.' }
-      ]);
+      removeTemporaryMessages();
+      addAssistantMessage(t('chatbot.recording_error'));
     }
-  };
+  }, [updateTemporaryMessage, startRecording, removeTemporaryMessages, addAssistantMessage, t]);
 
-  // Stop recording and process the audio
-  const stopRecordingAndProcess = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      
-      clearTimeout(recordingTimeoutRef.current);
-      clearInterval(recordingTimerRef.current);
-      
-      setIsRecording(false);
-      setRecordingTimer(0);
-      
-      // Update UI
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.isRecording 
-            ? { ...msg, content: '📝 Processing audio...' }
-            : msg
-        )
-      );
-    }
-  };
-
-  // Send audio to AssemblyAI for transcription
-  const sendToAssemblyAI = async () => {
-    try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-      
-      // Upload the audio file
-      const uploadRes = await fetch("https://api.assemblyai.com/v2/upload", {
-        method: "POST",
-        headers: { authorization: ASSEMBLYAI_API_KEY },
-        body: audioBlob
-      });
-      
-      const { upload_url } = await uploadRes.json();
-
-      // Request the transcription
-      const transcriptRes = await fetch("https://api.assemblyai.com/v2/transcript", {
-        method: "POST",
-        headers: {
-          authorization: ASSEMBLYAI_API_KEY,
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({ audio_url: upload_url })
-      });
-
-      const { id } = await transcriptRes.json();
-      
-      // Update the temporary message
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.isRecording 
-            ? { ...msg, content: '📝 Transcribing...' }
-            : msg
-        )
-      );
-
-      // Poll for results
-      let transcriptText = "";
-      while (true) {
-        const polling = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-          headers: { authorization: ASSEMBLYAI_API_KEY }
-        });
-        
-        const data = await polling.json();
-
-        if (data.status === "completed") {
-          transcriptText = data.text;
-          break;
-        } else if (data.status === "failed") {
-          // Update UI with failure message
-          setMessages(prevMessages => 
-            prevMessages.map(msg => 
-              msg.isRecording 
-                ? { role: 'user', content: '❌ Transcription failed.' }
-                : msg
-            )
-          );
-          setIsRecording(false);
-          return;
-        }
-        
-        // Wait before polling again
-        await new Promise(r => setTimeout(r, 2000));
-      }
-
-      // Replace the temporary message with the transcribed text
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.isRecording 
-            ? { role: 'user', content: transcriptText }
-            : msg
-        )
-      );
-      
-      setIsRecording(false);
-      
-      // Process the transcribed text with our AI
-      await handleAIResponse(transcriptText);
-      
-    } catch (err) {
-      console.error('Error with AssemblyAI:', err);
-      
-      // Update or remove the temporary message
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.isRecording 
-            ? { role: 'user', content: '❌ Error with transcription service.' }
-            : msg
-        )
-      );
-      
-      setIsRecording(false);
-    }
-  };
-
-  // Handle the AI response and text-to-speech
-  const handleAIResponse = async (userInput) => {
-    if (!userInput.trim()) return;
+  // Handle the AI response process
+  const handleAIResponse = useCallback(async (userInput) => {
+    if (!userInput?.trim()) return;
     
     setIsLoading(true);
     
     try {
-      // Prepare messages for API
+      // Prepare messages for API (filtering out recording messages)
       const apiMessages = [
-        {
-          role: 'system',
-          content: `You are an AI assistant for AgriConnect, an agricultural marketplace platform that connects farmers directly with buyers. 
-          Provide helpful, concise information about agricultural products, farming practices, and how to use the AgriConnect platform. 
-          
-          You can help farmers add new products to the marketplace. When a farmer wants to add a product, collect all required information 
-          and then use the addProduct function. The required fields are: name, description, price, quantity, and unit.
-          
-          If a user who is not a farmer or not logged in tries to add a product, kindly explain that only authenticated farmers can add products.
-          
-          Keep responses friendly and under 150 words unless you need to ask follow-up questions to collect product information.`
-        },
-        ...messages.filter(msg => !msg.isRecording) // Filter out temporary recording messages
+        { role: 'system', content: personalizedSystemPrompt }, // Use personalized prompt
+        ...messages.filter(msg => !msg.isRecording && msg.role !== 'tool')
       ];
       
       // Call OpenAI API with function calling enabled
-      const response = await client.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          ...apiMessages,
-          { role: 'user', content: userInput }
-        ],
-        temperature: 0.7,
-        top_p: 1.0,
-        max_tokens: 500,
-        tools: functionDefinitions.map(def => ({
-          type: 'function',
-          function: def
-        }))
-      });
+      const response = await generateResponse(
+        [...apiMessages, { role: 'user', content: userInput }],
+        FUNCTION_DEFINITIONS
+      );
       
       const responseMessage = response.choices[0].message;
       
@@ -373,233 +619,81 @@ const Chatbot = ({ auth, addProduct }) => {
       if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
         // Get the function call details
         const functionCall = responseMessage.tool_calls[0];
-        const functionName = functionCall.function.name;
-        const functionArgs = JSON.parse(functionCall.function.arguments);
         const toolCallId = functionCall.id;
         
         // Add AI's response message to the chat
-        setMessages(prevMessages => [
-          ...prevMessages.filter(msg => !msg.isRecording),
-          {
-            role: 'assistant',
-            content: `I'll help you add this product to your inventory.`,
-            tool_calls: [functionCall]
-          }
-        ]);
+        const aiMessage = addAssistantMessage(
+          responseMessage.content,
+          [functionCall]
+        );
         
-        // Execute the function
-        if (functionName in availableFunctions) {
-          const functionResult = await availableFunctions[functionName](functionArgs);
+        try {
+          // Execute the function
+          const functionResult = await executeFunction(functionCall);
           
-          // Add function result to the API messages for context
-          const toolResponseMessage = {
-            role: 'tool',
-            tool_call_id: toolCallId,
-            content: JSON.stringify(functionResult)
-          };
+          // Add function result as a tool message
+          const toolMessage = addToolMessage(toolCallId, functionResult);
           
-          // Add tool response message to the messages list
-          const updatedMessages = [
+          // Get AI to respond to the function result
+          const functionResponse = await generateResponse([
             ...apiMessages,
             { role: 'user', content: userInput },
             responseMessage,
-            toolResponseMessage
-          ];
-          
-          // Get AI to respond to the function result
-          const functionResponse = await client.chat.completions.create({
-            model: 'gpt-4o',
-            messages: updatedMessages,
-            temperature: 0.7,
-            max_tokens: 500
-          });
+            toolMessage
+          ]);
           
           const finalResponse = functionResponse.choices[0].message.content;
           
-          // Add AI's response to the function result to the chat
-          setMessages(prevMessages => [
-            ...prevMessages.filter(msg => !msg.isRecording),
-            toolResponseMessage, // Include the tool response for OpenAI's context
-            {
-              role: 'assistant',
-              content: finalResponse
-            }
-          ]);
+          // Add AI's response to the chat
+          addAssistantMessage(finalResponse);
           
           // Speak the response
-          speakWithElevenLabs(finalResponse);
+          await speakText(finalResponse, MAX_SPEECH_LENGTH, messages.length + 2);
+        } catch (functionError) {
+          console.error('Function execution error:', functionError);
+          addAssistantMessage(t('chatbot.function_error'));
         }
       } else {
         const assistantResponse = responseMessage.content;
         
         // Add AI response to chat
-        setMessages(prevMessages => [
-          ...prevMessages.filter(msg => !msg.isRecording), 
-          { role: 'assistant', content: assistantResponse }
-        ]);
+        const aiMessage = addAssistantMessage(assistantResponse);
         
         // Speak the response
-        speakWithElevenLabs(assistantResponse);
+        await speakText(assistantResponse, MAX_SPEECH_LENGTH, messages.length);
       }
     } catch (error) {
       console.error('Error calling AI API:', error);
-      setMessages(prevMessages => [
-        ...prevMessages.filter(msg => !msg.isRecording), 
-        { role: 'assistant', content: 'Sorry, I encountered an error. Please try again later.' }
-      ]);
+      addAssistantMessage(t('chatbot.api_error'));
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Handle text-to-speech with ElevenLabs
-  const speakWithElevenLabs = async (text) => {
-    try {
-      // Stop any current speech
-      stopSpeaking();
-      
-      const voiceId = "EXAVITQu4vr4xnSDxMaL";
-
-      // Process text to remove markdown formatting for speech
-      // Particularly remove asterisks used for emphasis in markdown
-      const textForSpeech = text
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold (**text**)
-        .replace(/\*(.*?)\*/g, '$1')     // Remove italic (*text*)
-        .replace(/\_\_?(.*?)\_\_?/g, '$1') // Remove underscores
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links, keep text
-        .replace(/^#+\s*(.*$)/gm, '$1'); // Remove headings
-
-      // Find the index of the most recent assistant message
-      const assistantIndex = messages.findIndex(
-        msg => msg.role === 'assistant' && msg.content === text
-      );
-      setCurrentSpeakingIndex(assistantIndex);
-      
-      // Limit text length to prevent large requests (ElevenLabs has limits)
-      const trimmedText = textForSpeech.length > 300 ? 
-        textForSpeech.substring(0, 300) + "..." : 
-        textForSpeech;
-
-      console.log("Calling ElevenLabs API with text length:", trimmedText.length);
-      
-      setIsSpeaking(true);
-      
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Accept": "audio/mpeg"
-        },
-        body: JSON.stringify({
-          text: trimmedText,
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75
-          },
-          model_id: "eleven_monolingual_v1" // Specifying model explicitly
-        })
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("ElevenLabs API error:", res.status, errorText);
-        setIsSpeaking(false);
-        throw new Error(`Failed to fetch TTS audio from ElevenLabs: ${res.status} ${errorText}`);
-      }
-
-      const audioBlob = await res.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setCurrentSpeakingIndex(null);
-      };
-      
-      audio.play();
-    } catch (error) {
-      console.error("Error speaking with ElevenLabs:", error);
-      setIsSpeaking(false);
-      setCurrentSpeakingIndex(null);
-      // Continue without speech - don't block the chat functionality
-    }
-  };
+  }, [
+    messages, 
+    generateResponse, 
+    executeFunction, 
+    addAssistantMessage, 
+    addToolMessage, 
+    speakText, 
+    t,
+    personalizedSystemPrompt
+  ]);
 
   // Handle regular text input submission
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback((e) => {
     e.preventDefault();
     
     if (!input.trim()) return;
     
     // Add user message to chat
-    const userMessage = { role: 'user', content: input };
-    setMessages(prevMessages => [...prevMessages.filter(msg => !msg.isRecording), userMessage]);
+    addUserMessage(input);
+    
+    // Clear input
     setInput('');
     
     // Process with AI
-    await handleAIResponse(input);
-  };
-
-  // Render function call messages nicely
-  const renderMessage = (message, index) => {
-    if (message.isRecording) {
-      // Render recording/transcribing message
-      return (
-        <div key={index} className="message user-message recording">
-          {message.content}
-          {message.content.includes('Listening') && (
-            <div className="typing-indicator recording-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          )}
-          <div className="recording-timer">
-            {recordingTimer}s
-          </div>
-        </div>
-      );
-    } else if (message.role === 'assistant' && message.tool_calls) {
-      // This is a function call message
-      return (
-        <div key={index} className="message bot-message">
-          <ReactMarkdown>{message.content}</ReactMarkdown>
-          <div className="function-call-info">
-            <em>Processing your request...</em>
-          </div>
-        </div>
-      );
-    } else if (message.role === 'tool') {
-      // This is a function result message, we can hide these or style them differently
-      return null; // Hide function result messages as they're mostly for the AI
-    } else {
-      // Normal message with markdown support
-      const isSpeakingThis = isSpeaking && currentSpeakingIndex === index;
-      
-      return (
-        <div 
-          key={index} 
-          className={`message ${message.role === 'user' ? 'user-message' : 'bot-message'} ${isSpeakingThis ? 'speaking' : ''}`}
-        >
-          <ReactMarkdown>{message.content}</ReactMarkdown>
-          
-          {/* Add stop speaking button when this message is being spoken */}
-          {isSpeakingThis && message.role === 'assistant' && (
-            <button 
-              className="stop-speech-button"
-              onClick={stopSpeaking}
-              aria-label="Stop speaking"
-            >
-              <FaStop />
-            </button>
-          )}
-        </div>
-      );
-    }
-  };
+    handleAIResponse(input);
+  }, [input, addUserMessage, handleAIResponse]);
 
   return (
     <div className="chatbot-container">
@@ -622,45 +716,24 @@ const Chatbot = ({ auth, addProduct }) => {
             </button>
           </div>
           
-          <div className="chatbot-messages">
-            {messages.map((message, index) => renderMessage(message, index))}
-            {isLoading && (
-              <div className="message bot-message loading">
-                <div className="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+          <ChatMessageList 
+            messages={messages}
+            isLoading={isLoading}
+            isSpeaking={isSpeaking}
+            currentSpeakingIndex={currentSpeakingIndex}
+            recordingTimer={recordingTimer}
+            onStopSpeaking={stopSpeaking}
+            messagesEndRef={messagesEndRef}
+          />
           
-          <form onSubmit={handleSubmit} className="chatbot-input-form">
-            <input
-              type="text"
-              value={input}
-              onChange={handleInputChange}
-              placeholder="Type your question..."
-              disabled={isLoading || isRecording}
-            />
-            <button 
-              type="button" 
-              onClick={startRecording}
-              disabled={isLoading || isRecording}
-              className="mic-button"
-              aria-label="Start voice recording"
-            >
-              <FaMicrophone />
-            </button>
-            <button 
-              type="submit" 
-              disabled={isLoading || isRecording || !input.trim()}
-              className="send-button"
-            >
-              <FaPaperPlane />
-            </button>
-          </form>
+          <ChatInputForm 
+            input={input}
+            isLoading={isLoading}
+            isRecording={isRecording}
+            onInputChange={handleInputChange}
+            onSubmit={handleSubmit}
+            onStartRecording={handleStartRecording}
+          />
         </div>
       )}
     </div>
@@ -671,4 +744,4 @@ const mapStateToProps = state => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps, { addProduct })(Chatbot);
+export default connect(mapStateToProps, { addProduct, updateProduct, deleteProduct, getProducts, createOrder, getOrder })(Chatbot);
