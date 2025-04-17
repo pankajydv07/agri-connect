@@ -29,12 +29,12 @@ AgriConnect aims to revolutionize the agricultural supply chain by:
 
 #### For Farmers
 - **Add Products**: "I want to sell 50 kg of organic tomatoes for 40 rupees per kg"
-- **Update Products**: "Change the price of my tomatoes to 45 rupees"
-- **Check Orders**: "Show me all my pending orders" or "What orders came in today?"
+- **Update Products**: "Change the price of my tomatoes to 45 rupees" (work in progress)
+- **Check Orders**: "Show me all my pending orders" or "What orders came in today?"(work in progress)
 - **Get Farming Tips**: "How do I deal with aphids on my tomato plants?"
-- **Weather Forecasts**: "What's the weather forecast for Hyderabad for the next 3 days?"
+- **Weather Forecasts**: "What's the weather forecast for Hyderabad for the next 3 days?"(work in progress)
 
-#### For Buyers
+#### For Buyers- (work in progress)
 - **Search Products**: "Find organic vegetables under 50 rupees per kg"
 - **Place Orders**: "I want to order 10 kg of those tomatoes"
 - **Track Orders**: "What's the status of my order number 12345?"
