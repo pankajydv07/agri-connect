@@ -16,13 +16,17 @@ import Alert from './components/layout/Alert';
 import PrivateRoute from './components/routing/PrivateRoute';
 import RoleRoute from './components/routing/RoleRoute';
 import Chatbot from './components/chatbot/Chatbot';
+import LearnHome from './pages/learn/LearnHome';
 
+import ModernTechnology from './pages/learn/ModernTechnology';
+import EcoFriendlyFarming from './pages/learn/EcoFriendlyFarming';
 // Pages
 import Home from './pages/Home';
 import Register from './pages/auth/Register';
 import Login from './pages/auth/Login';
 import Marketplace from './pages/marketplace/Marketplace';
 import ProductDetail from './pages/marketplace/ProductDetail';
+import ModernToolsMarketplace from './pages/marketplace/ModernToolsMarketplace';
 import FarmerDashboard from './pages/farmer/FarmerDashboard';
 import AddProduct from './pages/farmer/AddProduct';
 import EditProduct from './pages/farmer/EditProduct';
@@ -57,53 +61,57 @@ const App = () => {
               <Route exact path="/login" component={Login} />
               <Route exact path="/marketplace" component={Marketplace} />
               <Route exact path="/products/:id" component={ProductDetail} />
-              <Route exact path="/organic-farming" component={OrganicFarming} />
-              
+              <Route exact path="/tools-marketplace" component={ModernToolsMarketplace} />
+
               <PrivateRoute exact path="/profile" component={Profile} />
               <PrivateRoute exact path="/orders/:id" component={OrderDetail} />
-              
-              <RoleRoute 
-                exact 
-                path="/farmer/dashboard" 
-                component={FarmerDashboard} 
-                role="farmer" 
+
+              <RoleRoute
+                exact
+                path="/farmer/dashboard"
+                component={FarmerDashboard}
+                role="farmer"
               />
-              <RoleRoute 
-                exact 
-                path="/farmer/products/add" 
-                component={AddProduct} 
-                role="farmer" 
+              <RoleRoute
+                exact
+                path="/farmer/products/add"
+                component={AddProduct}
+                role="farmer"
               />
-              <RoleRoute 
-                exact 
-                path="/farmer/products/edit/:id" 
-                component={EditProduct} 
-                role="farmer" 
+              <RoleRoute
+                exact
+                path="/farmer/products/edit/:id"
+                component={EditProduct}
+                role="farmer"
               />
-              
-              <RoleRoute 
-                exact 
-                path="/buyer/dashboard" 
-                component={BuyerDashboard} 
-                role="buyer" 
+
+              <RoleRoute
+                exact
+                path="/buyer/dashboard"
+                component={BuyerDashboard}
+                role="buyer"
               />
-              
-              <RoleRoute 
-                exact 
-                path="/admin/dashboard" 
-                component={AdminDashboard} 
-                role="admin" 
+
+              <RoleRoute
+                exact
+                path="/admin/dashboard"
+                component={AdminDashboard}
+                role="admin"
               />
-              
+              // SDG Knowledge Hub routes
+              <Route exact path="/sdg-knowledge" component={LearnHome} />
+              <Route exact path="/sdg-knowledge/organic-farming" component={OrganicFarming} />
+              <Route exact path="/sdg-knowledge/modern-technology" component={ModernTechnology} />
+              <Route exact path="/sdg-knowledge/eco-friendly" component={EcoFriendlyFarming} />
               <Route component={NotFound} />
             </Switch>
           </div>
-          
-          
+
+
         </div>
       </Router>
     </Provider>
-    
+
   );
 };
 

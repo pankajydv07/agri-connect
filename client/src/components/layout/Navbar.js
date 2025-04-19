@@ -31,9 +31,13 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       <Link to="/farmer/products/add" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.addProduct')}
       </Link>
-      <Link to="/organic-farming" className="text-white hover:text-green-200 px-3 py-2 rounded">
-        Organic Farming
+      <Link to="/tools-marketplace" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Modern Tools
       </Link>
+      <Link to="/sdg-knowledge" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        SDG Knowledge Hub
+      </Link>
+
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
       </Link>
@@ -47,6 +51,12 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       </Link>
       <Link to="/marketplace" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.marketplace')}
+      </Link>
+      <Link to="/tools-marketplace" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Modern Tools
+      </Link>
+      <Link to="/sdg-knowledge" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        SDG Knowledge Hub
       </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
@@ -105,8 +115,11 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/farmer/products/add" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.addProduct')}
                         </Link>
-                        <Link to="/organic-farming" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                          Organic Farming
+                        <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Modern Tools
+                        </Link>
+                        <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          SDG Knowledge Hub
                         </Link>
                       </Fragment>
                     )}
@@ -118,8 +131,11 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.marketplace')}
                         </Link>
-                        <Link to="/organic-farming" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                          Organic Farming
+                        <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Modern Tools
+                        </Link>
+                        <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          SDG Knowledge Hub
                         </Link>
                       </Fragment>
                     )}
@@ -193,8 +209,11 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                     <Link to="/marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       {t('nav.marketplace')}
                     </Link>
-                    <Link to="/organic-farming" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                      Organic Farming
+                    <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                      Modern Tools
+                    </Link>
+                    <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                      SDG Knowledge Hub
                     </Link>
                     <Link to="/register" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       {t('nav.register')}
@@ -256,8 +275,11 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   <Link to="/farmer/products/add" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     {t('nav.addProduct')}
                   </Link>
-                  <Link to="/organic-farming" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Organic Farming
+                  <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Modern Tools
+                  </Link>
+                  <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    SDG Knowledge Hub
                   </Link>
                 </Fragment>
               )}
@@ -269,8 +291,11 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   <Link to="/marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     {t('nav.marketplace')}
                   </Link>
-                  <Link to="/organic-farming" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Organic Farming
+                  <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Modern Tools
+                  </Link>
+                  <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    SDG Knowledge Hub
                   </Link>
                 </Fragment>
               )}
@@ -318,8 +343,11 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
               <Link to="/marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 {t('nav.marketplace')}
               </Link>
-              <Link to="/organic-farming" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                Organic Farming
+              <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                Modern Tools
+              </Link>
+              <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                SDG Knowledge Hub
               </Link>
               <Link to="/register" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 {t('nav.register')}

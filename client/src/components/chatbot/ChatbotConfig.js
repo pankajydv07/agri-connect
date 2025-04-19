@@ -1,7 +1,7 @@
 // Chatbot configuration constants
 export const RECORDING_TIMEOUT = 10000; // 10 seconds
 export const VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
-export const OPENAI_MODEL = 'gpt-4o';
+export const OPENAI_MODEL = 'openai/gpt-4.1';
 export const MAX_SPEECH_LENGTH = 300;
 
 // System prompt for the AI assistant

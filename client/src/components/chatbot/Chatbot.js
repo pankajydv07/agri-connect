@@ -54,8 +54,8 @@ const Chatbot = ({
 
   // Initialize OpenAI client
   const { generateResponse } = useOpenAI(
-    "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",
-"https://models.inference.ai.azure.com"
+    "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",
+"https://models.github.ai/inference"
   );
 
   // Create a personalized system prompt by replacing the role placeholder
