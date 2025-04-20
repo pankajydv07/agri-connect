@@ -43,6 +43,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       <Link to="/carbon-footprint" className="text-white hover:text-green-200 px-3 py-2 rounded">
         Carbon Footprint
       </Link>
+      <Link to="/pest-detection" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Pest Detection
+      </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
       </Link>
@@ -69,6 +72,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       <Link to="/carbon-footprint" className="text-white hover:text-green-200 px-3 py-2 rounded">
         Carbon Footprint
       </Link>
+      <Link to="/pest-detection" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Pest Detection
+      </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
       </Link>
@@ -94,6 +100,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       </Link>
       <Link to="/carbon-footprint" className="text-white hover:text-green-200 px-3 py-2 rounded">
         Carbon Footprint
+      </Link>
+      <Link to="/pest-detection" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Pest Detection
       </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
@@ -164,6 +173,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/carbon-footprint" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Carbon Footprint
                         </Link>
+                        <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Pest Detection
+                        </Link>
                       </Fragment>
                     )}
                     {user && user.role === 'buyer' && (
@@ -174,11 +186,20 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.marketplace')}
                         </Link>
+                        <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Modern Tools
+                        </Link>
+                        <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          SDG Knowledge Hub
+                        </Link>
                         <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Crop Recommendation
                         </Link>
                         <Link to="/carbon-footprint" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Carbon Footprint
+                        </Link>
+                        <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Pest Detection
                         </Link>
                       </Fragment>
                     )}
@@ -190,11 +211,20 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/ngo-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.marketplace')}
                         </Link>
+                        <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Modern Tools
+                        </Link>
+                        <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          SDG Knowledge Hub
+                        </Link>
                         <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Crop Recommendation
                         </Link>
                         <Link to="/carbon-footprint" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Carbon Footprint
+                        </Link>
+                        <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Pest Detection
                         </Link>
                       </Fragment>
                     )}
@@ -266,19 +296,22 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                 ) : (
                   <Fragment>
                     <Link to="/marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                      {t('nav.marketplace')}
+                      Marketplace
                     </Link>
                     <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                      Modern Tools
+                      Tools
                     </Link>
                     <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       SDG Knowledge Hub
                     </Link>
-                    <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                      Crop Recommendation
-                    </Link>
                     <Link to="/carbon-footprint" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       Carbon Footprint
+                    </Link>
+                    <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                      Pest Detection
+                    </Link>
+                    <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                      Crop Recommendation
                     </Link>
                     <Link to="/register" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       {t('nav.register')}
@@ -352,6 +385,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     Carbon Footprint
                   </Link>
+                  <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Pest Detection
+                  </Link>
                 </Fragment>
               )}
               {user && user.role === 'buyer' && (
@@ -374,6 +410,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     Carbon Footprint
                   </Link>
+                  <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Pest Detection
+                  </Link>
                 </Fragment>
               )}
               {user && user.role === 'ngo_buyer' && (
@@ -395,6 +434,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   </Link>
                   <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     Carbon Footprint
+                  </Link>
+                  <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Pest Detection
                   </Link>
                 </Fragment>
               )}
@@ -440,19 +482,22 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
           ) : (
             <Fragment>
               <Link to="/marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                {t('nav.marketplace')}
+                Marketplace
               </Link>
               <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                Modern Tools
+                Tools
               </Link>
               <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 SDG Knowledge Hub
               </Link>
-              <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                Crop Recommendation
-              </Link>
               <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 Carbon Footprint
+              </Link>
+              <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                Pest Detection
+              </Link>
+              <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                Crop Recommendation
               </Link>
               <Link to="/register" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 {t('nav.register')}
