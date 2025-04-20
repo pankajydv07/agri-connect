@@ -5,7 +5,7 @@ import App from './App';
 import axios from 'axios';
 
 // Set base URL for all axios requests
-axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.baseURL = 'https://backendforagri-production.up.railway.app';
 
 // Get the root element
 const container = document.getElementById('root');
