@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const convertTextToSpeech = require('./ttsService');
+const fs = require('fs');
+const { SpeechClient } = require('@google-cloud/speech');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -14,15 +17,24 @@ const cropRoutes = require('./routes/cropRoutes');
 
 // Import multer for file uploads
 const multer = require('multer');
-const fs = require('fs');
-const { SpeechClient } = require('@google-cloud/speech');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Configure CORS
+app.use(cors({
+  origin: 'http://localhost:3000', // Your React app's URL
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
+// Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
@@ -98,6 +110,21 @@ app.post('/api/speech/transcribe', audioUpload.single('audio'), async (req, res)
   }
 });
 
+app.post('/api/speak', async (req, res) => {
+  const { message, language = 'en-US' } = req.body;
+  try {
+    const filename = await convertTextToSpeech(message, 'farmer-output.mp3', language);
+    // Return the full URL path for the audio file
+    res.json({ 
+      status: 'Audio created!', 
+      file: `http://localhost:5000/uploads/${filename}` 
+    });
+  } catch (err) {
+    console.error('TTS Error:', err);
+    res.status(500).json({ error: 'TTS failed', details: err.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -105,4 +132,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

@@ -284,12 +284,110 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
 /**
  * Custom hook for managing text-to-speech functionality
  */
-export const useTextToSpeech = (elevenLabsKey, voiceId) => {
-  const audioRef = useRef(null);
+export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentSpeakingIndex, setCurrentSpeakingIndex] = useState(null);
+  const audioRef = useRef(null);
 
-  // Clean up function
+  // Map chatbot language codes to Google TTS language codes
+  const getTTSLanguageCode = (language) => {
+    switch(language) {
+      case 'hindi':
+        return 'hi-IN';
+      case 'telugu':
+        return 'te-IN';
+      case 'english':
+      default:
+        return 'en-US';
+    }
+  };
+
+  const speakText = async (text, maxLength, messageIndex, language = 'english') => {
+    if (!text) return;
+    
+    try {
+      // Stop any existing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      setIsSpeaking(true);
+      setCurrentSpeakingIndex(messageIndex);
+      
+      // Truncate text if it exceeds maxLength
+      const truncatedText = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+      
+      // Get the correct TTS language code
+      const ttsLanguage = getTTSLanguageCode(language);
+      console.log('Sending text to TTS:', truncatedText);
+      console.log('Language:', language, 'TTS Language:', ttsLanguage);
+      
+      const response = await fetch('http://localhost:5000/api/speak', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          message: truncatedText,
+          language: ttsLanguage
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate speech');
+      }
+
+      const data = await response.json();
+      console.log('Received audio file:', data.file);
+      
+      // Create a new audio element
+      const audio = new Audio();
+      audioRef.current = audio;
+      
+      // Set up event listeners
+      audio.oncanplaythrough = () => {
+        console.log('Audio is ready to play');
+        audio.play().catch(error => {
+          console.error('Error playing audio:', error);
+          setIsSpeaking(false);
+          setCurrentSpeakingIndex(null);
+        });
+      };
+      
+      audio.onerror = (error) => {
+        console.error('Audio playback error:', error);
+        setIsSpeaking(false);
+        setCurrentSpeakingIndex(null);
+      };
+      
+      audio.onended = () => {
+        console.log('Audio playback ended');
+        setIsSpeaking(false);
+        setCurrentSpeakingIndex(null);
+      };
+      
+      // Set the source and start loading
+      audio.src = data.file;
+      
+    } catch (error) {
+      console.error('Error in text-to-speech:', error);
+      setIsSpeaking(false);
+      setCurrentSpeakingIndex(null);
+    }
+  };
+
+  const stopSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+    setCurrentSpeakingIndex(null);
+  };
+
+  // Clean up audio on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -299,91 +397,7 @@ export const useTextToSpeech = (elevenLabsKey, voiceId) => {
     };
   }, []);
 
-  // Function to stop speaking
-  const stopSpeaking = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsSpeaking(false);
-    setCurrentSpeakingIndex(null);
-  }, []);
-
-  // Function to speak text
-  const speakText = useCallback(async (text, maxLength, messageIndex) => {
-    try {
-      // Stop any current speech
-      stopSpeaking();
-      
-      if (!text || !elevenLabsKey || !voiceId) return;
-
-      // Process text to remove markdown formatting for speech
-      const textForSpeech = text
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold (**text**)
-        .replace(/\*(.*?)\*/g, '$1')     // Remove italic (*text*)
-        .replace(/\_\_?(.*?)\_\_?/g, '$1') // Remove underscores
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links, keep text
-        .replace(/^#+\s*(.*$)/gm, '$1'); // Remove headings
-
-      setCurrentSpeakingIndex(messageIndex);
-      
-      // Limit text length to prevent large requests
-      const trimmedText = textForSpeech.length > maxLength ? 
-        textForSpeech.substring(0, maxLength) + "..." : 
-        textForSpeech;
-
-      setIsSpeaking(true);
-      
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "xi-api-key": elevenLabsKey,
-          "Accept": "audio/mpeg"
-        },
-        body: JSON.stringify({
-          text: trimmedText,
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75
-          },
-          model_id: "eleven_monolingual_v1"
-        })
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to fetch TTS audio: ${res.status} ${errorText}`);
-      }
-
-      const audioBlob = await res.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl); // Clean up the URL object
-        setIsSpeaking(false);
-        setCurrentSpeakingIndex(null);
-      };
-      
-      audio.play();
-      return true;
-    } catch (error) {
-      console.error("Error with text-to-speech:", error);
-      setIsSpeaking(false);
-      setCurrentSpeakingIndex(null);
-      return false;
-    }
-  }, [elevenLabsKey, voiceId, stopSpeaking]);
-
-  return {
-    isSpeaking,
-    currentSpeakingIndex,
-    speakText,
-    stopSpeaking
-  };
+  return { isSpeaking, currentSpeakingIndex, speakText, stopSpeaking };
 };
 
 /**

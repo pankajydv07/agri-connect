@@ -55,7 +55,7 @@ const Chatbot = ({
 
   // Initialize OpenAI client
   const { generateResponse } = useOpenAI(
-    "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",
+    "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",
     "https://models.github.ai/inference"
   );
 
@@ -506,7 +506,7 @@ const Chatbot = ({
     currentSpeakingIndex, 
     speakText, 
     stopSpeaking 
-  } = useTextToSpeech(ELEVENLABS_API_KEY, VOICE_ID);
+  } = useTextToSpeech();
   
   // Define handleAIResponse first before it's used in other callbacks
   const handleAIResponse = useCallback(async (userInput) => {
@@ -517,7 +517,7 @@ const Chatbot = ({
     try {
       // Prepare messages for API (filtering out recording messages)
       const apiMessages = [
-        { role: 'system', content: personalizedSystemPrompt }, // Use personalized prompt
+        { role: 'system', content: personalizedSystemPrompt },
         ...messages.filter(msg => !msg.isRecording && msg.role !== 'tool')
       ];
       
@@ -548,7 +548,7 @@ const Chatbot = ({
           // Add function result as a tool message
           const toolMessage = addToolMessage(toolCallId, functionResult);
           
-          // Get AI to respond to the function result - include all messages including tool message
+          // Get AI to respond to the function result
           const secondApiMessages = [
             { role: 'system', content: personalizedSystemPrompt },
             ...messages.filter(msg => !msg.isRecording),
@@ -561,8 +561,8 @@ const Chatbot = ({
           // Add AI's response to the chat
           addAssistantMessage(finalResponse);
           
-          // Speak the response
-          await speakText(finalResponse, MAX_SPEECH_LENGTH, messages.length + 1);
+          // Speak the response in the current language
+          await speakText(finalResponse, MAX_SPEECH_LENGTH, messages.length + 1, speechLanguage);
         } catch (functionError) {
           console.error('Function execution error:', functionError);
           addAssistantMessage(t('chatbot.function_error'));
@@ -573,8 +573,8 @@ const Chatbot = ({
         // Add AI response to chat
         addAssistantMessage(assistantResponse);
         
-        // Speak the response
-        await speakText(assistantResponse, MAX_SPEECH_LENGTH, messages.length);
+        // Speak the response in the current language
+        await speakText(assistantResponse, MAX_SPEECH_LENGTH, messages.length, speechLanguage);
       }
     } catch (error) {
       console.error('Error calling AI API:', error);
@@ -590,7 +590,8 @@ const Chatbot = ({
     addToolMessage, 
     speakText, 
     t,
-    personalizedSystemPrompt
+    personalizedSystemPrompt,
+    speechLanguage
   ]);
 
   // Speech to text handlers - defined after handleAIResponse

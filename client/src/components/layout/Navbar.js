@@ -117,9 +117,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/farmer/dashboard" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.dashboard')}
                         </Link>
-                        <Link to="/farmer/products/add" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                        {/* <Link to="/farmer/products/add" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.addProduct')}
-                        </Link>
+                        </Link> */}
                         <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Modern Tools
                         </Link>
@@ -139,12 +139,12 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.marketplace')}
                         </Link>
-                        <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                        {/* <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Modern Tools
                         </Link>
                         <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           SDG Knowledge Hub
-                        </Link>
+                        </Link> */}
                         <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Crop Recommendation
                         </Link>

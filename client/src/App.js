@@ -26,7 +26,8 @@ import Register from './pages/auth/Register';
 import Login from './pages/auth/Login';
 import Marketplace from './pages/marketplace/Marketplace';
 import ProductDetail from './pages/marketplace/ProductDetail';
-import ModernToolsMarketplace from './pages/marketplace/ModernToolsMarketplace';
+import ToolsMarketplace from './pages/tools/ToolsMarketplace';
+import ToolDetails from './pages/tools/ToolDetails';
 import FarmerDashboard from './pages/farmer/FarmerDashboard';
 import AddProduct from './pages/farmer/AddProduct';
 import EditProduct from './pages/farmer/EditProduct';
@@ -62,7 +63,8 @@ const App = () => {
               <Route exact path="/login" component={Login} />
               <Route exact path="/marketplace" component={Marketplace} />
               <Route exact path="/products/:id" component={ProductDetail} />
-              <Route exact path="/tools-marketplace" component={ModernToolsMarketplace} />
+              <Route exact path="/tools-marketplace" component={ToolsMarketplace} />
+              <Route exact path="/tools/:toolId" component={ToolDetails} />
 
               <PrivateRoute exact path="/profile" component={Profile} />
               <PrivateRoute exact path="/orders/:id" component={OrderDetail} />
@@ -108,12 +110,9 @@ const App = () => {
               <Route component={NotFound} />
             </Switch>
           </div>
-
-
         </div>
       </Router>
     </Provider>
-
   );
 };
 
