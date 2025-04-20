@@ -2,7 +2,16 @@ const axios = require('axios');
 
 const getCropRecommendation = async (req, res) => {
   try {
-    const { soil, season, location } = req.body;
+    const { 
+      soil, 
+      season, 
+      location, 
+      previousCrops, 
+      irrigationAvailable,
+      landSize,
+      soilPh,
+      farmingExperience 
+    } = req.body;
 
     // Validate required fields
     if (!soil || !season || !location) {
@@ -11,8 +20,36 @@ const getCropRecommendation = async (req, res) => {
       });
     }
 
-    // Construct a smart prompt
-    const prompt = `Suggest the best crops to grow in ${location} during ${season} season. The soil type is ${soil}.`;
+    // Construct a detailed prompt
+    let prompt = `Provide a detailed crop recommendation for a farm with the following characteristics:
+- Location: ${location}
+- Season: ${season}
+- Soil Type: ${soil}`;
+
+    // Add optional information to the prompt if provided
+    if (previousCrops) {
+      prompt += `\n- Previous Crops: ${previousCrops}`;
+    }
+    if (irrigationAvailable) {
+      prompt += `\n- Irrigation: ${irrigationAvailable}`;
+    }
+    if (landSize) {
+      prompt += `\n- Land Size: ${landSize} acres`;
+    }
+    if (soilPh) {
+      prompt += `\n- Soil pH: ${soilPh}`;
+    }
+    if (farmingExperience) {
+      prompt += `\n- Farmer Experience Level: ${farmingExperience}`;
+    }
+
+    prompt += `\n\nPlease provide:
+1. Top 3 recommended crops with reasons
+2. Expected yield per acre
+3. Required irrigation and fertilizer needs
+4. Potential challenges and mitigation strategies
+5. Crop rotation suggestions based on previous crops (if provided)
+6. Additional tips based on the farmer's experience level`;
 
     const response = await axios.post(
       'https://api.studio.nebius.com/v1/chat/completions',
@@ -20,7 +57,10 @@ const getCropRecommendation = async (req, res) => {
         model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-fast-LoRa:CropRecommendation-ZIHX',
         temperature: 0,
         messages: [
-          { role: 'system', content: 'You are a helpful crop recommendation assistant.' },
+          { 
+            role: 'system', 
+            content: 'You are an expert agricultural advisor with deep knowledge of crop selection, farming practices, and local agricultural conditions. Provide detailed, practical recommendations tailored to the farmer\'s specific situation.' 
+          },
           { role: 'user', content: prompt }
         ]
       },

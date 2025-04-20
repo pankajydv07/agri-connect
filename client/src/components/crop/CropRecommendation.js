@@ -6,7 +6,12 @@ const CropRecommendation = () => {
   const [formData, setFormData] = useState({
     soil: '',
     season: '',
-    location: ''
+    location: '',
+    previousCrops: '',
+    irrigationAvailable: 'yes',
+    landSize: '',
+    soilPh: '',
+    farmingExperience: 'beginner'
   });
   const [recommendation, setRecommendation] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,50 +61,132 @@ const CropRecommendation = () => {
         <div className="crop-recommendation-container">
           <h2 className="text-3xl font-bold mb-6">Crop Recommendation</h2>
           <form onSubmit={handleSubmit} className="crop-form">
-            <div className="form-group">
-              <label htmlFor="soil">Soil Type:</label>
-              <input
-                type="text"
-                id="soil"
-                name="soil"
-                value={formData.soil}
-                onChange={handleChange}
-                required
-                placeholder="e.g., loamy, sandy, clay"
-                className="w-full"
-              />
+            {/* Basic Information */}
+            <div className="form-section">
+              <h3 className="section-title">Basic Information</h3>
+              <div className="form-group">
+                <label htmlFor="soil">Soil Type:</label>
+                <input
+                  type="text"
+                  id="soil"
+                  name="soil"
+                  value={formData.soil}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., loamy, sandy, clay"
+                  className="w-full"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="season">Season:</label>
+                <select
+                  id="season"
+                  name="season"
+                  value={formData.season}
+                  onChange={handleChange}
+                  required
+                  className="w-full"
+                >
+                  <option value="">Select Season</option>
+                  <option value="summer">Summer</option>
+                  <option value="winter">Winter</option>
+                  <option value="monsoon">Monsoon</option>
+                  <option value="spring">Spring</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="location">Location:</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Maharashtra, Karnataka"
+                  className="w-full"
+                />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="season">Season:</label>
-              <select
-                id="season"
-                name="season"
-                value={formData.season}
-                onChange={handleChange}
-                required
-                className="w-full"
-              >
-                <option value="">Select Season</option>
-                <option value="summer">Summer</option>
-                <option value="winter">Winter</option>
-                <option value="monsoon">Monsoon</option>
-                <option value="spring">Spring</option>
-              </select>
-            </div>
+            {/* Additional Information */}
+            <div className="form-section">
+              <h3 className="section-title">Additional Information</h3>
+              <div className="form-group">
+                <label htmlFor="previousCrops">Previous Crops (last 2 seasons):</label>
+                <textarea
+                  id="previousCrops"
+                  name="previousCrops"
+                  value={formData.previousCrops}
+                  onChange={handleChange}
+                  placeholder="e.g., Rice (last season), Wheat (before that)"
+                  className="w-full"
+                  rows="2"
+                />
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="location">Location:</label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-                placeholder="e.g., Maharashtra, Karnataka"
-                className="w-full"
-              />
+              <div className="form-group">
+                <label htmlFor="landSize">Land Size (in acres):</label>
+                <input
+                  type="number"
+                  id="landSize"
+                  name="landSize"
+                  value={formData.landSize}
+                  onChange={handleChange}
+                  placeholder="e.g., 2.5"
+                  className="w-full"
+                  step="0.1"
+                  min="0"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="soilPh">Soil pH (if known):</label>
+                <input
+                  type="number"
+                  id="soilPh"
+                  name="soilPh"
+                  value={formData.soilPh}
+                  onChange={handleChange}
+                  placeholder="e.g., 6.5"
+                  className="w-full"
+                  step="0.1"
+                  min="0"
+                  max="14"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="irrigationAvailable">Irrigation Availability:</label>
+                <select
+                  id="irrigationAvailable"
+                  name="irrigationAvailable"
+                  value={formData.irrigationAvailable}
+                  onChange={handleChange}
+                  className="w-full"
+                >
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="partial">Partial</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="farmingExperience">Farming Experience:</label>
+                <select
+                  id="farmingExperience"
+                  name="farmingExperience"
+                  value={formData.farmingExperience}
+                  onChange={handleChange}
+                  className="w-full"
+                >
+                  <option value="beginner">Beginner (0-2 years)</option>
+                  <option value="intermediate">Intermediate (2-5 years)</option>
+                  <option value="experienced">Experienced (5+ years)</option>
+                </select>
+              </div>
             </div>
 
             <button 
