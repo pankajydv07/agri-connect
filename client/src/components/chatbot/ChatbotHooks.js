@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import OpenAI from 'openai';
 import { OPENAI_MODEL } from './ChatbotConfig';
+import axios from 'axios';
 
 /**
  * Custom hook for managing OpenAI API interactions
@@ -48,37 +49,163 @@ export const useOpenAI = (apiKey, baseURL) => {
 };
 
 /**
- * Custom hook for managing speech-to-text functionality
+ * Custom hook for managing speech-to-text functionality with multiple providers
  */
 export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const recordingTimeoutRef = useRef(null);
+  const audioStreamRef = useRef(null);
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTimer, setRecordingTimer] = useState(0);
   const [transcriptStatus, setTranscriptStatus] = useState('');
+  const [speechProvider, setSpeechProvider] = useState('google'); // 'google' or 'assemblyai'
+  const [recognitionLanguage, setRecognitionLanguage] = useState('en-US');
 
   // Clean up function
   useEffect(() => {
     return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-      }
+      stopRecording();
       clearTimeout(recordingTimeoutRef.current);
       clearInterval(recordingTimerRef.current);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
 
-  // Function to start recording
-  const startRecording = useCallback(async (timeoutMs) => {
+  // Function to set speech recognition language
+  const setLanguage = useCallback((language) => {
+    let langCode;
+    
+    switch(language) {
+      case 'hindi':
+        langCode = 'hi-IN';
+        break;
+      case 'telugu':
+        langCode = 'te-IN';
+        break;
+      case 'english':
+      default:
+        langCode = 'en-US';
+    }
+    
+    setRecognitionLanguage(langCode);
+    return langCode;
+  }, []);
+
+  // Function to change speech provider
+  const changeProvider = useCallback((provider) => {
+    if (provider === 'google' || provider === 'assemblyai') {
+      setSpeechProvider(provider);
+    }
+  }, []);
+
+  // Google Cloud Speech Transcription
+  const transcribeWithGoogle = useCallback(async (audioBlob) => {
     try {
+      setTranscriptStatus('processing');
+      
+      // Create a FormData object to send the audio
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      formData.append('language', recognitionLanguage);
+      
+      // Send to our server endpoint
+      const response = await axios.post('/api/speech/transcribe', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data && response.data.transcript) {
+        setTranscriptStatus('completed');
+        return response.data.transcript;
+      } else {
+        throw new Error('No transcript returned');
+      }
+    } catch (error) {
+      setTranscriptStatus('error');
+      throw error;
+    }
+  }, [recognitionLanguage]);
+
+  // AssemblyAI Transcription
+  const transcribeWithAssemblyAI = useCallback(async (audioBlob) => {
+    try {
+      setTranscriptStatus('processing');
+      
+      // Upload the audio file
+      const uploadRes = await fetch("https://api.assemblyai.com/v2/upload", {
+        method: "POST",
+        headers: { authorization: assemblyAiKey },
+        body: audioBlob
+      });
+      
+      const { upload_url } = await uploadRes.json();
+
+      // Request the transcription
+      const transcriptRes = await fetch("https://api.assemblyai.com/v2/transcript", {
+        method: "POST",
+        headers: {
+          authorization: assemblyAiKey,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({ 
+          audio_url: upload_url,
+          language_code: recognitionLanguage.split('-')[0] // Convert "en-US" to "en"
+        })
+      });
+
+      const { id } = await transcriptRes.json();
+      
+      setTranscriptStatus('transcribing');
+
+      // Poll for results
+      let transcriptText = "";
+      while (true) {
+        const polling = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+          headers: { authorization: assemblyAiKey }
+        });
+        
+        const data = await polling.json();
+
+        if (data.status === "completed") {
+          transcriptText = data.text || "";
+          break;
+        } else if (data.status === "failed") {
+          throw new Error('Transcription failed');
+        }
+        
+        // Wait before polling again
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      setTranscriptStatus('completed');
+      return transcriptText;
+    } catch (error) {
+      setTranscriptStatus('error');
+      throw error;
+    }
+  }, [assemblyAiKey, recognitionLanguage]);
+
+  // Function to start recording
+  const startRecording = useCallback(async (timeoutMs, language = null) => {
+    try {
+      // Update language if provided
+      if (language) {
+        setLanguage(language);
+      }
+      
       setIsRecording(true);
       setRecordingTimer(0);
       setTranscriptStatus('listening');
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
 
@@ -88,56 +215,24 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
 
       mediaRecorderRef.current.onstop = async () => {
         try {
-          setTranscriptStatus('processing');
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           
-          // Upload the audio file
-          const uploadRes = await fetch("https://api.assemblyai.com/v2/upload", {
-            method: "POST",
-            headers: { authorization: assemblyAiKey },
-            body: audioBlob
-          });
-          
-          const { upload_url } = await uploadRes.json();
-
-          // Request the transcription
-          const transcriptRes = await fetch("https://api.assemblyai.com/v2/transcript", {
-            method: "POST",
-            headers: {
-              authorization: assemblyAiKey,
-              "content-type": "application/json"
-            },
-            body: JSON.stringify({ audio_url: upload_url })
-          });
-
-          const { id } = await transcriptRes.json();
-          
-          setTranscriptStatus('transcribing');
-
-          // Poll for results
+          // Choose the transcription provider
           let transcriptText = "";
-          while (true) {
-            const polling = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-              headers: { authorization: assemblyAiKey }
-            });
-            
-            const data = await polling.json();
-
-            if (data.status === "completed") {
-              transcriptText = data.text || "";
-              break;
-            } else if (data.status === "failed") {
-              throw new Error('Transcription failed');
-            }
-            
-            // Wait before polling again
-            await new Promise(r => setTimeout(r, 2000));
+          if (speechProvider === 'google') {
+            transcriptText = await transcribeWithGoogle(audioBlob);
+          } else {
+            transcriptText = await transcribeWithAssemblyAI(audioBlob);
           }
-
-          setTranscriptStatus('completed');
+          
+          // Stop all tracks on the stream
+          if (audioStreamRef.current) {
+            audioStreamRef.current.getTracks().forEach(track => track.stop());
+          }
+          
           onTranscriptionComplete(transcriptText);
         } catch (err) {
-          setTranscriptStatus('error');
+          console.error("Transcription error:", err);
           onError(err);
         }
       };
@@ -159,7 +254,7 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
       setTranscriptStatus('error');
       onError(error);
     }
-  }, [assemblyAiKey, onTranscriptionComplete, onError]);
+  }, [transcribeWithGoogle, transcribeWithAssemblyAI, speechProvider, onTranscriptionComplete, onError, setLanguage]);
 
   // Function to stop recording
   const stopRecording = useCallback(() => {
@@ -178,8 +273,11 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
     isRecording,
     recordingTimer,
     transcriptStatus,
+    recognitionLanguage,
     startRecording,
-    stopRecording
+    stopRecording,
+    setLanguage,
+    changeProvider
   };
 };
 

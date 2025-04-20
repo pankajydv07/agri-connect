@@ -28,7 +28,7 @@ import {
   useChatMessages,
   useFunctionCalling 
 } from './ChatbotHooks';
-import { ChatMessageList, ChatInputForm } from './ChatbotComponents';
+import { ChatMessageList, ChatInputForm, LanguageSelector } from './ChatbotComponents';
 import './Chatbot.css';
 import axios from 'axios';
 
@@ -46,6 +46,7 @@ const Chatbot = ({
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [speechLanguage, setSpeechLanguage] = useState('english');
   
   const messagesEndRef = useRef(null);
 
@@ -54,8 +55,8 @@ const Chatbot = ({
 
   // Initialize OpenAI client
   const { generateResponse } = useOpenAI(
-    "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",
-"https://models.github.ai/inference"
+    "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",
+    "https://models.github.ai/inference"
   );
 
   // Create a personalized system prompt by replacing the role placeholder
@@ -506,8 +507,93 @@ const Chatbot = ({
     speakText, 
     stopSpeaking 
   } = useTextToSpeech(ELEVENLABS_API_KEY, VOICE_ID);
+  
+  // Define handleAIResponse first before it's used in other callbacks
+  const handleAIResponse = useCallback(async (userInput) => {
+    if (!userInput?.trim()) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Prepare messages for API (filtering out recording messages)
+      const apiMessages = [
+        { role: 'system', content: personalizedSystemPrompt }, // Use personalized prompt
+        ...messages.filter(msg => !msg.isRecording && msg.role !== 'tool')
+      ];
+      
+      // Call OpenAI API with function calling enabled
+      const response = await generateResponse(
+        [...apiMessages, { role: 'user', content: userInput }],
+        FUNCTION_DEFINITIONS
+      );
+      
+      const responseMessage = response.choices[0].message;
+      
+      // Check if the model wants to call a function
+      if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+        // Get the function call details
+        const functionCall = responseMessage.tool_calls[0];
+        const toolCallId = functionCall.id;
+        
+        // Add AI's response message to the chat
+        addAssistantMessage(
+          responseMessage.content || "Let me help with that...",
+          responseMessage.tool_calls
+        );
+        
+        try {
+          // Execute the function
+          const functionResult = await executeFunction(functionCall);
+          
+          // Add function result as a tool message
+          const toolMessage = addToolMessage(toolCallId, functionResult);
+          
+          // Get AI to respond to the function result - include all messages including tool message
+          const secondApiMessages = [
+            { role: 'system', content: personalizedSystemPrompt },
+            ...messages.filter(msg => !msg.isRecording),
+          ];
+          
+          const functionResponse = await generateResponse(secondApiMessages);
+          
+          const finalResponse = functionResponse.choices[0].message.content;
+          
+          // Add AI's response to the chat
+          addAssistantMessage(finalResponse);
+          
+          // Speak the response
+          await speakText(finalResponse, MAX_SPEECH_LENGTH, messages.length + 1);
+        } catch (functionError) {
+          console.error('Function execution error:', functionError);
+          addAssistantMessage(t('chatbot.function_error'));
+        }
+      } else {
+        const assistantResponse = responseMessage.content;
+        
+        // Add AI response to chat
+        addAssistantMessage(assistantResponse);
+        
+        // Speak the response
+        await speakText(assistantResponse, MAX_SPEECH_LENGTH, messages.length);
+      }
+    } catch (error) {
+      console.error('Error calling AI API:', error);
+      addAssistantMessage(t('chatbot.api_error'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    messages, 
+    generateResponse, 
+    executeFunction, 
+    addAssistantMessage, 
+    addToolMessage, 
+    speakText, 
+    t,
+    personalizedSystemPrompt
+  ]);
 
-  // Speech to text handlers
+  // Speech to text handlers - defined after handleAIResponse
   const handleTranscriptionComplete = useCallback((transcriptText) => {
     if (transcriptText && transcriptText.trim()) {
       // Replace the temporary message with the transcribed text
@@ -518,7 +604,7 @@ const Chatbot = ({
       removeTemporaryMessages();
       addAssistantMessage(t('chatbot.transcription_empty'));
     }
-  }, [addUserMessage, addAssistantMessage, removeTemporaryMessages, t]);
+  }, [addUserMessage, addAssistantMessage, removeTemporaryMessages, t, handleAIResponse]);
 
   const handleTranscriptionError = useCallback((error) => {
     console.error('Transcription error:', error);
@@ -531,12 +617,19 @@ const Chatbot = ({
     recordingTimer, 
     transcriptStatus, 
     startRecording, 
-    stopRecording 
+    stopRecording,
+    setLanguage
   } = useSpeechToText(
     ASSEMBLYAI_API_KEY, 
     handleTranscriptionComplete, 
     handleTranscriptionError
   );
+
+  // Handle language change
+  const handleLanguageChange = useCallback((language) => {
+    setSpeechLanguage(language);
+    setLanguage(language);
+  }, [setLanguage]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -585,99 +678,14 @@ const Chatbot = ({
     try {
       // Add a temporary recording message to show status
       updateTemporaryMessage('🎙️ Listening...');
-      // Start recording with timeout
-      await startRecording(RECORDING_TIMEOUT);
+      // Start recording with timeout and current language
+      await startRecording(RECORDING_TIMEOUT, speechLanguage);
     } catch (error) {
       console.error('Error starting recording:', error);
       removeTemporaryMessages();
       addAssistantMessage(t('chatbot.recording_error'));
     }
-  }, [updateTemporaryMessage, startRecording, removeTemporaryMessages, addAssistantMessage, t]);
-
-  // Handle the AI response process
-  const handleAIResponse = useCallback(async (userInput) => {
-    if (!userInput?.trim()) return;
-    
-    setIsLoading(true);
-    
-    try {
-      // Prepare messages for API (filtering out recording messages)
-      const apiMessages = [
-        { role: 'system', content: personalizedSystemPrompt }, // Use personalized prompt
-        ...messages.filter(msg => !msg.isRecording && msg.role !== 'tool')
-      ];
-      
-      // Call OpenAI API with function calling enabled
-      const response = await generateResponse(
-        [...apiMessages, { role: 'user', content: userInput }],
-        FUNCTION_DEFINITIONS
-      );
-      
-      const responseMessage = response.choices[0].message;
-      
-      // Check if the model wants to call a function
-      if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-        // Get the function call details
-        const functionCall = responseMessage.tool_calls[0];
-        const toolCallId = functionCall.id;
-        
-        // Add AI's response message to the chat
-        const aiMessage = addAssistantMessage(
-          responseMessage.content,
-          [functionCall]
-        );
-        
-        try {
-          // Execute the function
-          const functionResult = await executeFunction(functionCall);
-          
-          // Add function result as a tool message
-          const toolMessage = addToolMessage(toolCallId, functionResult);
-          
-          // Get AI to respond to the function result
-          const functionResponse = await generateResponse([
-            ...apiMessages,
-            { role: 'user', content: userInput },
-            responseMessage,
-            toolMessage
-          ]);
-          
-          const finalResponse = functionResponse.choices[0].message.content;
-          
-          // Add AI's response to the chat
-          addAssistantMessage(finalResponse);
-          
-          // Speak the response
-          await speakText(finalResponse, MAX_SPEECH_LENGTH, messages.length + 2);
-        } catch (functionError) {
-          console.error('Function execution error:', functionError);
-          addAssistantMessage(t('chatbot.function_error'));
-        }
-      } else {
-        const assistantResponse = responseMessage.content;
-        
-        // Add AI response to chat
-        const aiMessage = addAssistantMessage(assistantResponse);
-        
-        // Speak the response
-        await speakText(assistantResponse, MAX_SPEECH_LENGTH, messages.length);
-      }
-    } catch (error) {
-      console.error('Error calling AI API:', error);
-      addAssistantMessage(t('chatbot.api_error'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    messages, 
-    generateResponse, 
-    executeFunction, 
-    addAssistantMessage, 
-    addToolMessage, 
-    speakText, 
-    t,
-    personalizedSystemPrompt
-  ]);
+  }, [updateTemporaryMessage, startRecording, removeTemporaryMessages, addAssistantMessage, t, speechLanguage]);
 
   // Handle regular text input submission
   const handleSubmit = useCallback((e) => {
@@ -711,6 +719,10 @@ const Chatbot = ({
         <div className="chatbot-window">
           <div className="chatbot-header">
             <h3>AgriConnect Assistant</h3>
+            <LanguageSelector 
+              currentLanguage={speechLanguage}
+              onLanguageChange={handleLanguageChange}
+            />
             <button onClick={toggleChat} className="close-button">
               <FaTimes />
             </button>

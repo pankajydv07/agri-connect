@@ -1,8 +1,6 @@
-import React, { memo } from 'react';
-import { FaStop } from 'react-icons/fa';
+import React, { memo, useState } from 'react';
+import { FaStop, FaGlobe, FaMicrophone, FaPaperPlane, FaChevronDown } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
-// Import the FaMicrophone and FaPaperPlane at the top
-import { FaMicrophone, FaPaperPlane } from 'react-icons/fa';
 
 /**
  * Component for rendering a single chat message
@@ -112,6 +110,56 @@ export const ChatMessageList = memo(({
 });
 
 /**
+ * Language selector component for speech recognition
+ */
+export const LanguageSelector = memo(({ currentLanguage, onLanguageChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const languages = [
+    { code: 'english', label: 'English', flag: '🇺🇸' },
+    { code: 'hindi', label: 'हिंदी (Hindi)', flag: '🇮🇳' },
+    { code: 'telugu', label: 'తెలుగు (Telugu)', flag: '🇮🇳' }
+  ];
+  
+  const currentLang = languages.find(lang => lang.code === currentLanguage) || languages[0];
+  
+  return (
+    <div className="language-selector">
+      <button 
+        type="button" 
+        className="language-button"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Select language"
+      >
+        <FaGlobe className="language-icon" />
+        <span className="language-flag">{currentLang.flag}</span>
+        <span className="language-label">{currentLang.label}</span>
+        <FaChevronDown className={`language-arrow ${isOpen ? 'open' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="language-dropdown">
+          {languages.map(language => (
+            <button
+              key={language.code}
+              type="button"
+              className={`language-option ${currentLanguage === language.code ? 'active' : ''}`}
+              onClick={() => {
+                onLanguageChange(language.code);
+                setIsOpen(false);
+              }}
+            >
+              <span className="language-flag">{language.flag}</span>
+              <span className="language-name">{language.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+/**
  * Component for the chat input area
  */
 export const ChatInputForm = memo(({ 
@@ -120,34 +168,37 @@ export const ChatInputForm = memo(({
   isRecording, 
   onInputChange, 
   onSubmit, 
-  onStartRecording 
+  onStartRecording
 }) => {
   return (
-    <form onSubmit={onSubmit} className="chatbot-input-form">
-      <input
-        type="text"
-        value={input}
-        onChange={onInputChange}
-        placeholder="Type your question..."
-        disabled={isLoading || isRecording}
-      />
-      <button 
-        type="button" 
-        onClick={onStartRecording}
-        disabled={isLoading || isRecording}
-        className="mic-button"
-        aria-label="Start voice recording"
-      >
-        <FaMicrophone />
-      </button>
-      <button 
-        type="submit" 
-        disabled={isLoading || isRecording || !input.trim()}
-        className="send-button"
-      >
-        <FaPaperPlane />
-      </button>
-    </form>
+    <div className="chatbot-input-container">
+      <form onSubmit={onSubmit} className="chatbot-input-form">
+        <input
+          type="text"
+          value={input}
+          onChange={onInputChange}
+          placeholder="Type your question..."
+          disabled={isLoading || isRecording}
+          className="chatbot-input"
+        />
+        <button 
+          type="button" 
+          onClick={onStartRecording}
+          disabled={isLoading || isRecording}
+          className="mic-button"
+          aria-label="Start voice recording"
+        >
+          <FaMicrophone />
+        </button>
+        <button 
+          type="submit" 
+          disabled={isLoading || isRecording || !input.trim()}
+          className="send-button"
+        >
+          <FaPaperPlane />
+        </button>
+      </form>
+    </div>
   );
 });
 
