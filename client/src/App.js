@@ -38,6 +38,7 @@ import Profile from './pages/profile/Profile';
 import OrganicFarming from './pages/organic/OrganicFarming';
 import NotFound from './pages/NotFound';
 import CropRecommendation from './components/crop/CropRecommendation';
+import NGOMarketplace from './pages/marketplace/NGOMarketplace';
 
 // Check for token in localStorage
 if (localStorage.token) {
@@ -62,6 +63,7 @@ const App = () => {
               <Route exact path="/register" component={Register} />
               <Route exact path="/login" component={Login} />
               <Route exact path="/marketplace" component={Marketplace} />
+              <Route exact path="/ngo-marketplace" component={NGOMarketplace} />
               <Route exact path="/products/:id" component={ProductDetail} />
               <Route exact path="/tools-marketplace" component={ToolsMarketplace} />
               <Route exact path="/tools/:toolId" component={ToolDetails} />
@@ -92,7 +94,7 @@ const App = () => {
                 exact
                 path="/buyer/dashboard"
                 component={BuyerDashboard}
-                role="buyer"
+                role={['buyer', 'ngo_buyer']}
               />
 
               <RoleRoute

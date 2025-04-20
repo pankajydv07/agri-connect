@@ -92,6 +92,7 @@ const Register = ({ setAlert, register, isAuthenticated }) => {
             className="w-full px-3 py-2 border rounded-md"
           >
             <option value="buyer">Buyer</option>
+            <option value="ngo_buyer">NGO Buyer</option>
             <option value="farmer">Farmer</option>
           </select>
         </div>

@@ -69,6 +69,29 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
     </Fragment>
   );
 
+  const ngoBuyerLinks = (
+    <Fragment>
+      <Link to="/buyer/dashboard" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        {t('nav.dashboard')}
+      </Link>
+      <Link to="/ngo-marketplace" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        {t('nav.marketplace')}
+      </Link>
+      <Link to="/tools-marketplace" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Modern Tools
+      </Link>
+      <Link to="/sdg-knowledge" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        SDG Knowledge Hub
+      </Link>
+      <Link to="/crop-recommendation" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Crop Recommendation
+      </Link>
+      <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        {t('nav.profile')}
+      </Link>
+    </Fragment>
+  );
+
   const adminLinks = (
     <Fragment>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
@@ -139,12 +162,19 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           {t('nav.marketplace')}
                         </Link>
-                        {/* <Link to="/tools-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                          Modern Tools
+                        <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Crop Recommendation
                         </Link>
-                        <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                          SDG Knowledge Hub
-                        </Link> */}
+                      </Fragment>
+                    )}
+                    {user && user.role === 'ngo_buyer' && (
+                      <Fragment>
+                        <Link to="/buyer/dashboard" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          {t('nav.dashboard')}
+                        </Link>
+                        <Link to="/ngo-marketplace" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          {t('nav.marketplace')}
+                        </Link>
                         <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Crop Recommendation
                         </Link>
@@ -306,6 +336,25 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                     {t('nav.dashboard')}
                   </Link>
                   <Link to="/marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    {t('nav.marketplace')}
+                  </Link>
+                  <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Modern Tools
+                  </Link>
+                  <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    SDG Knowledge Hub
+                  </Link>
+                  <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Crop Recommendation
+                  </Link>
+                </Fragment>
+              )}
+              {user && user.role === 'ngo_buyer' && (
+                <Fragment>
+                  <Link to="/buyer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    {t('nav.dashboard')}
+                  </Link>
+                  <Link to="/ngo-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     {t('nav.marketplace')}
                   </Link>
                   <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
