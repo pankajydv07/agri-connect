@@ -39,6 +39,7 @@ import OrganicFarming from './pages/organic/OrganicFarming';
 import NotFound from './pages/NotFound';
 import CropRecommendation from './components/crop/CropRecommendation';
 import NGOMarketplace from './pages/marketplace/NGOMarketplace';
+import CarbonFootprintCalculator from './pages/carbon/CarbonFootprintCalculator';
 
 // Check for token in localStorage
 if (localStorage.token) {
@@ -67,6 +68,7 @@ const App = () => {
               <Route exact path="/products/:id" component={ProductDetail} />
               <Route exact path="/tools-marketplace" component={ToolsMarketplace} />
               <Route exact path="/tools/:toolId" component={ToolDetails} />
+              <Route exact path="/carbon-footprint" component={CarbonFootprintCalculator} />
 
               <PrivateRoute exact path="/profile" component={Profile} />
               <PrivateRoute exact path="/orders/:id" component={OrderDetail} />
