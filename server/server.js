@@ -10,6 +10,7 @@ const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
+const cropRoutes = require('./routes/cropRoutes');
 
 // Import multer for file uploads
 const multer = require('multer');
@@ -49,6 +50,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/crop', cropRoutes);
 
 // Speech-to-text API endpoint
 app.post('/api/speech/transcribe', audioUpload.single('audio'), async (req, res) => {

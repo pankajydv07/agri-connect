@@ -36,6 +36,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import Profile from './pages/profile/Profile';
 import OrganicFarming from './pages/organic/OrganicFarming';
 import NotFound from './pages/NotFound';
+import CropRecommendation from './components/crop/CropRecommendation';
 
 // Check for token in localStorage
 if (localStorage.token) {
@@ -103,6 +104,7 @@ const App = () => {
               <Route exact path="/sdg-knowledge/organic-farming" component={OrganicFarming} />
               <Route exact path="/sdg-knowledge/modern-technology" component={ModernTechnology} />
               <Route exact path="/sdg-knowledge/eco-friendly" component={EcoFriendlyFarming} />
+              <Route exact path="/crop-recommendation" component={CropRecommendation} />
               <Route component={NotFound} />
             </Switch>
           </div>

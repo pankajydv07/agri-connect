@@ -37,7 +37,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       <Link to="/sdg-knowledge" className="text-white hover:text-green-200 px-3 py-2 rounded">
         SDG Knowledge Hub
       </Link>
-
+      <Link to="/crop-recommendation" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Crop Recommendation
+      </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
       </Link>
@@ -57,6 +59,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       </Link>
       <Link to="/sdg-knowledge" className="text-white hover:text-green-200 px-3 py-2 rounded">
         SDG Knowledge Hub
+      </Link>
+      <Link to="/crop-recommendation" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Crop Recommendation
       </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
@@ -121,6 +126,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           SDG Knowledge Hub
                         </Link>
+                        <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Crop Recommendation
+                        </Link>
                       </Fragment>
                     )}
                     {user && user.role === 'buyer' && (
@@ -136,6 +144,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         </Link>
                         <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           SDG Knowledge Hub
+                        </Link>
+                        <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Crop Recommendation
                         </Link>
                       </Fragment>
                     )}
@@ -215,6 +226,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                     <Link to="/sdg-knowledge" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       SDG Knowledge Hub
                     </Link>
+                    <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                      Crop Recommendation
+                    </Link>
                     <Link to="/register" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       {t('nav.register')}
                     </Link>
@@ -281,6 +295,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     SDG Knowledge Hub
                   </Link>
+                  <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Crop Recommendation
+                  </Link>
                 </Fragment>
               )}
               {user && user.role === 'buyer' && (
@@ -296,6 +313,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                   </Link>
                   <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                     SDG Knowledge Hub
+                  </Link>
+                  <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Crop Recommendation
                   </Link>
                 </Fragment>
               )}
@@ -348,6 +368,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
               </Link>
               <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 SDG Knowledge Hub
+              </Link>
+              <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                Crop Recommendation
               </Link>
               <Link to="/register" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 {t('nav.register')}
