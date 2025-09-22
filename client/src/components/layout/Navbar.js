@@ -46,6 +46,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       <Link to="/pest-detection" className="text-white hover:text-green-200 px-3 py-2 rounded">
         Pest Detection
       </Link>
+      <Link to="/maintenance-logs" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Maintenance Log
+      </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
       </Link>
@@ -74,6 +77,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       </Link>
       <Link to="/pest-detection" className="text-white hover:text-green-200 px-3 py-2 rounded">
         Pest Detection
+      </Link>
+      <Link to="/maintenance-logs" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Maintenance Log
       </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
@@ -104,6 +110,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       <Link to="/pest-detection" className="text-white hover:text-green-200 px-3 py-2 rounded">
         Pest Detection
       </Link>
+      <Link to="/maintenance-logs" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Maintenance Log
+      </Link>
       <Link to="/profile" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.profile')}
       </Link>
@@ -117,6 +126,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
       </Link>
       <Link to="/admin/dashboard" className="text-white hover:text-green-200 px-3 py-2 rounded">
         {t('nav.adminDashboard')}
+      </Link>
+      <Link to="/maintenance-logs" className="text-white hover:text-green-200 px-3 py-2 rounded">
+        Maintenance Log
       </Link>
     </Fragment>
   );
@@ -176,6 +188,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Pest Detection
                         </Link>
+                        <Link to="/maintenance-logs" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Maintenance Log
+                        </Link>
                       </Fragment>
                     )}
                     {user && user.role === 'buyer' && (
@@ -200,6 +215,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         </Link>
                         <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Pest Detection
+                        </Link>
+                        <Link to="/maintenance-logs" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Maintenance Log
                         </Link>
                       </Fragment>
                     )}
@@ -226,12 +244,20 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                         <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                           Pest Detection
                         </Link>
+                        <Link to="/maintenance-logs" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Maintenance Log
+                        </Link>
                       </Fragment>
                     )}
                     {user && user.role === 'admin' && (
-                      <Link to="/admin/dashboard" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
-                        {t('nav.adminDashboard')}
-                      </Link>
+                      <Fragment>
+                        <Link to="/admin/dashboard" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          {t('nav.adminDashboard')}
+                        </Link>
+                        <Link to="/maintenance-logs" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                          Maintenance Log
+                        </Link>
+                      </Fragment>
                     )}
                     <Link to="/profile" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       {t('nav.profile')}
@@ -310,6 +336,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
                     <Link to="/pest-detection" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       Pest Detection
                     </Link>
+                    <Link to="/maintenance-logs" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
+                      Maintenance Log
+                    </Link>
                     <Link to="/crop-recommendation" className="px-4 py-2 text-white font-medium hover:bg-green-500 rounded-lg transition-colors duration-200">
                       Crop Recommendation
                     </Link>
@@ -365,85 +394,99 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
         <div className="px-2 pt-2 pb-3 space-y-1">
           {!loading && isAuthenticated ? (
             <Fragment>
-              {user && user.role === 'farmer' && (
-                <Fragment>
-                  <Link to="/farmer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    {t('nav.dashboard')}
-                  </Link>
-                  <Link to="/farmer/products/add" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    {t('nav.addProduct')}
-                  </Link>
-                  <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Modern Tools
-                  </Link>
-                  <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    SDG Knowledge Hub
-                  </Link>
-                  <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Crop Recommendation
-                  </Link>
-                  <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Carbon Footprint
-                  </Link>
-                  <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Pest Detection
-                  </Link>
-                </Fragment>
-              )}
-              {user && user.role === 'buyer' && (
-                <Fragment>
-                  <Link to="/buyer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    {t('nav.dashboard')}
-                  </Link>
-                  <Link to="/marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    {t('nav.marketplace')}
-                  </Link>
-                  <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Modern Tools
-                  </Link>
-                  <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    SDG Knowledge Hub
-                  </Link>
-                  <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Crop Recommendation
-                  </Link>
-                  <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Carbon Footprint
-                  </Link>
-                  <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Pest Detection
-                  </Link>
-                </Fragment>
-              )}
-              {user && user.role === 'ngo_buyer' && (
-                <Fragment>
-                  <Link to="/buyer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    {t('nav.dashboard')}
-                  </Link>
-                  <Link to="/ngo-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    {t('nav.marketplace')}
-                  </Link>
-                  <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Modern Tools
-                  </Link>
-                  <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    SDG Knowledge Hub
-                  </Link>
-                  <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Crop Recommendation
-                  </Link>
-                  <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Carbon Footprint
-                  </Link>
-                  <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                    Pest Detection
-                  </Link>
-                </Fragment>
-              )}
+                {user && user.role === 'farmer' && (
+                  <Fragment>
+                    <Link to="/farmer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      {t('nav.dashboard')}
+                    </Link>
+                    <Link to="/farmer/products/add" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      {t('nav.addProduct')}
+                    </Link>
+                    <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Modern Tools
+                    </Link>
+                    <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      SDG Knowledge Hub
+                    </Link>
+                    <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Crop Recommendation
+                    </Link>
+                    <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Carbon Footprint
+                    </Link>
+                    <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Pest Detection
+                    </Link>
+                    <Link to="/maintenance-logs" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Maintenance Log
+                    </Link>
+                  </Fragment>
+                )}
+                {user && user.role === 'buyer' && (
+                  <Fragment>
+                    <Link to="/buyer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      {t('nav.dashboard')}
+                    </Link>
+                    <Link to="/marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      {t('nav.marketplace')}
+                    </Link>
+                    <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Modern Tools
+                    </Link>
+                    <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      SDG Knowledge Hub
+                    </Link>
+                    <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Crop Recommendation
+                    </Link>
+                    <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Carbon Footprint
+                    </Link>
+                    <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Pest Detection
+                    </Link>
+                    <Link to="/maintenance-logs" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Maintenance Log
+                    </Link>
+                  </Fragment>
+                )}
+                {user && user.role === 'ngo_buyer' && (
+                  <Fragment>
+                    <Link to="/buyer/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      {t('nav.dashboard')}
+                    </Link>
+                    <Link to="/ngo-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      {t('nav.marketplace')}
+                    </Link>
+                    <Link to="/tools-marketplace" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Modern Tools
+                    </Link>
+                    <Link to="/sdg-knowledge" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      SDG Knowledge Hub
+                    </Link>
+                    <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Crop Recommendation
+                    </Link>
+                    <Link to="/carbon-footprint" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Carbon Footprint
+                    </Link>
+                    <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Pest Detection
+                    </Link>
+                    <Link to="/maintenance-logs" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                      Maintenance Log
+                    </Link>
+                  </Fragment>
+                )}
               {user && user.role === 'admin' && (
-                <Link to="/admin/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
-                  {t('nav.adminDashboard')}
-                </Link>
+                <Fragment>
+                  <Link to="/admin/dashboard" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    {t('nav.adminDashboard')}
+                  </Link>
+                  <Link to="/maintenance-logs" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                    Maintenance Log
+                  </Link>
+                </Fragment>
               )}
               <Link to="/profile" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 {t('nav.profile')}
@@ -495,6 +538,9 @@ const Navbar = ({ auth: { isAuthenticated, loading, user }, logout }) => {
               </Link>
               <Link to="/pest-detection" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 Pest Detection
+              </Link>
+              <Link to="/maintenance-logs" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
+                Maintenance Log
               </Link>
               <Link to="/crop-recommendation" className="block px-3 py-2 text-white font-medium hover:bg-green-700 rounded-md">
                 Crop Recommendation
