@@ -1,0 +1,158 @@
+const fs = require('fs');
+const path = require('path');
+
+describe('Environment Configuration Files', () => {
+  const rootDir = path.join(__dirname, '..');
+  
+  describe('Root .env.example (Backend)', () => {
+    const envExamplePath = path.join(rootDir, '.env.example');
+    
+    test('should exist in project root', () => {
+      expect(fs.existsSync(envExamplePath)).toBe(true);
+    });
+    
+    test('should contain all required backend environment variables', () => {
+      const content = fs.readFileSync(envExamplePath, 'utf8');
+      
+      expect(content).toContain('PORT=');
+      expect(content).toContain('NODE_ENV=');
+      expect(content).toContain('MONGO_URI=');
+      expect(content).toContain('JWT_SECRET=');
+      expect(content).toContain('GOOGLE_APPLICATION_CREDENTIALS=');
+      expect(content).toContain('OPENAI_API_KEY=');
+    });
+    
+    test('should contain descriptive comments for configuration', () => {
+      const content = fs.readFileSync(envExamplePath, 'utf8');
+      
+      // Check for comments explaining major sections
+      expect(content).toMatch(/# Server Configuration/);
+      expect(content).toMatch(/# Database/);
+      expect(content).toMatch(/# Authentication/);
+    });
+    
+    test('should use placeholder values instead of real secrets', () => {
+      const content = fs.readFileSync(envExamplePath, 'utf8');
+      const lines = content.split('\n');
+      
+      lines.forEach(line => {
+        if (line.includes('=') && !line.startsWith('#') && line.trim() !== '') {
+          const [key, ...valueParts] = line.split('=');
+          const value = valueParts.join('=').trim();
+          
+          // Skip empty values or standard non-secret values
+          if (!value || value === 'development' || value === '5000' || value === '3000') {
+            return;
+          }
+          
+          // Check that sensitive keys use placeholders
+          if (key.includes('SECRET') || key.includes('KEY') || key.includes('PASSWORD') || key.includes('CREDENTIALS')) {
+            const hasPlaceholder = 
+              value.includes('your_') || 
+              value.includes('example') || 
+              value.includes('path/to/') ||
+              value.includes('localhost');
+            
+            expect(hasPlaceholder).toBe(true);
+          }
+        }
+      });
+    });
+  });
+  
+  describe('Client .env.example (Frontend)', () => {
+    const clientEnvPath = path.join(rootDir, 'client', '.env.example');
+    
+    test('should exist in client directory', () => {
+      expect(fs.existsSync(clientEnvPath)).toBe(true);
+    });
+    
+    test('should contain required frontend environment variables', () => {
+      const content = fs.readFileSync(clientEnvPath, 'utf8');
+      
+      expect(content).toContain('REACT_APP_API_URL=');
+      expect(content).toContain('REACT_APP_OPENAI_API_KEY=');
+      expect(content).toContain('REACT_APP_GOOGLE_CLIENT_ID=');
+    });
+    
+    test('should use localhost for API URL in development', () => {
+      const content = fs.readFileSync(clientEnvPath, 'utf8');
+      
+      expect(content).toContain('localhost:5000');
+    });
+    
+    test('should warn about client-side API key exposure', () => {
+      const content = fs.readFileSync(clientEnvPath, 'utf8');
+      
+      // Should contain warning about exposing keys in client
+      const hasWarning = content.toLowerCase().includes('not recommended') || 
+                        content.toLowerCase().includes('exposing') ||
+                        content.toLowerCase().includes('security');
+      expect(hasWarning).toBe(true);
+    });
+  });
+  
+  describe('.gitignore Protection', () => {
+    const gitignorePath = path.join(rootDir, '.gitignore');
+    const clientGitignorePath = path.join(rootDir, 'client', '.gitignore');
+    
+    test('root .gitignore should exist', () => {
+      expect(fs.existsSync(gitignorePath)).toBe(true);
+    });
+    
+    test('should ignore .env files in root', () => {
+      const content = fs.readFileSync(gitignorePath, 'utf8');
+      
+      expect(content).toMatch(/\.env$/m);
+      expect(content).toMatch(/\.env\.local/);
+    });
+    
+    test('should not ignore .env.example files', () => {
+      const content = fs.readFileSync(gitignorePath, 'utf8');
+      const lines = content.split('\n');
+      
+      // Check that .env.example is not explicitly ignored
+      const ignoresExample = lines.some(line => 
+        line.trim() === '.env.example' || line.includes('.env.example')
+      );
+      
+      expect(ignoresExample).toBe(false);
+    });
+    
+    test('client .gitignore should ignore env files if it exists', () => {
+      if (fs.existsSync(clientGitignorePath)) {
+        const content = fs.readFileSync(clientGitignorePath, 'utf8');
+        expect(content).toMatch(/\.env/);
+      }
+    });
+  });
+  
+  describe('Environment Variable Format Validation', () => {
+    test('should have valid KEY=VALUE format without spaces around equals', () => {
+      const envExamplePath = path.join(rootDir, '.env.example');
+      const content = fs.readFileSync(envExamplePath, 'utf8');
+      const lines = content.split('\n');
+      
+      lines.forEach(line => {
+        if (line.trim() && !line.startsWith('#')) {
+          // Should not have spaces around equals sign for actual variables
+          if (line.includes('=')) {
+            expect(line).not.toMatch(/\s+=\s+/); // No spaces around =
+          }
+        }
+      });
+    });
+    
+    test('should not contain trailing whitespace', () => {
+      const envExamplePath = path.join(rootDir, '.env.example');
+      const content = fs.readFileSync(envExamplePath, 'utf8');
+      
+      const lines = content.split('\n');
+      lines.forEach(line => {
+        if (line.trim()) {
+          expect(line).toBe(line.trimEnd());
+        }
+      });
+    });
+  });
+});
