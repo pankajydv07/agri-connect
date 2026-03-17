@@ -1,0 +1,229 @@
+import os
+import pytest
+from pathlib import Path
+
+class TestEnvExampleFiles:
+    """Tests for environment example files and security configurations."""
+    
+    def test_root_env_example_exists(self):
+        """Verify root .env.example file exists."""
+        root_env = Path('.env.example')
+        assert root_env.exists(), "Root .env.example file should exist"
+        assert root_env.is_file(), ".env.example should be a file"
+    
+    def test_client_env_example_exists(self):
+        """Verify client .env.example file exists."""
+        client_env = Path('client/.env.example')
+        assert client_env.exists(), "Client .env.example file should exist"
+        assert client_env.is_file(), "client/.env.example should be a file"
+    
+    def test_root_env_example_contains_required_variables(self):
+        """Verify root .env.example contains all required server variables."""
+        with open('.env.example', 'r') as f:
+            content = f.read()
+        
+        required_vars = [
+            'NODE_ENV',
+            'PORT',
+            'MONGO_URI',
+            'JWT_SECRET',
+            'GOOGLE_APPLICATION_CREDENTIALS',
+            'GOOGLE_CLOUD_PROJECT_ID'
+        ]
+        
+        for var in required_vars:
+            assert var in content, f"Root .env.example should contain {var}"
+    
+    def test_client_env_example_contains_required_variables(self):
+        """Verify client .env.example contains all required client variables."""
+        with open('client/.env.example', 'r') as f:
+            content = f.read()
+        
+        required_vars = [
+            'REACT_APP_API_URL',
+            'REACT_APP_ENV'
+        ]
+        
+        for var in required_vars:
+            assert var in content, f"Client .env.example should contain {var}"
+        
+        # Verify React naming convention
+        assert 'REACT_APP_' in content, "Client env vars should use REACT_APP_ prefix"
+    
+    def test_root_env_example_uses_placeholders(self):
+        """Verify root .env.example uses placeholder values, not real secrets."""
+        with open('.env.example', 'r') as f:
+            content = f.read()
+        
+        # Check for placeholder patterns
+        placeholder_patterns = [
+            'your_jwt_secret_key_here',
+            'your-project-id',
+            'path/to/service-account-key.json',
+            'localhost:27017'
+        ]
+        
+        for pattern in placeholder_patterns:
+            assert pattern in content, f"Should use placeholder: {pattern}"
+        
+        # Ensure no real secrets are present (basic checks)
+        assert 'mongodb+srv://' not in content, "Should not contain real MongoDB URI"
+        assert 'AIza' not in content, "Should not contain Google API keys"
+    
+    def test_client_env_example_uses_placeholders(self):
+        """Verify client .env.example uses placeholder values."""
+        with open('client/.env.example', 'r') as f:
+            content = f.read()
+        
+        assert 'localhost:5000' in content, "Should use localhost placeholder for API"
+        assert 'your_google_api_key' not in content or 'your_google_api_key_here' in content, "Should use placeholder for API keys"
+
+
+class TestGitignoreConfiguration:
+    """Tests for .gitignore security configurations."""
+    
+    def test_root_gitignore_exists(self):
+        """Verify root .gitignore exists."""
+        gitignore = Path('.gitignore')
+        assert gitignore.exists(), "Root .gitignore should exist"
+    
+    def test_client_gitignore_exists(self):
+        """Verify client .gitignore exists."""
+        client_gitignore = Path('client/.gitignore')
+        assert client_gitignore.exists(), "Client .gitignore should exist"
+    
+    def test_root_gitignore_ignores_env_files(self):
+        """Verify root .gitignore ignores .env files."""
+        with open('.gitignore', 'r') as f:
+            content = f.read()
+        
+        assert '.env' in content, "Root .gitignore should ignore .env files"
+        assert 'service-account-key.json' in content, "Should ignore Google service account keys"
+        assert '*-service-account.json' in content, "Should ignore all service account JSON files"
+    
+    def test_client_gitignore_ignores_env_files(self):
+        """Verify client .gitignore ignores env files."""
+        with open('client/.gitignore', 'r') as f:
+            content = f.read()
+        
+        assert '.env' in content, "Client .gitignore should ignore .env"
+        assert '.env.local' in content, "Should ignore .env.local"
+        assert '.env.*.local' in content, "Should ignore .env.*.local"
+    
+    def test_no_env_files_committed(self):
+        """Integration test: Verify no .env files are actually committed."""
+        # This test checks that .env files don't exist in the repo (they should be gitignored)
+        env_files = [
+            Path('.env'),
+            Path('client/.env'),
+            Path('client/.env.local'),
+            Path('client/.env.development.local'),
+            Path('client/.env.production.local')
+        ]
+        
+        for env_file in env_files:
+            assert not env_file.exists(), f"{env_file} should not exist (should be gitignored)"
+    
+    def test_no_service_account_keys_committed(self):
+        """Security test: Verify no Google service account keys are committed."""
+        # Check for common service account key patterns
+        forbidden_patterns = [
+            '*-service-account.json',
+            'service-account-key.json',
+            '*credentials*.json'
+        ]
+        
+        for pattern in forbidden_patterns:
+            matches = list(Path('.').glob(pattern))
+            # Exclude the example file if it exists
+            matches = [m for m in matches if 'example' not in str(m)]
+            assert len(matches) == 0, f"Found potential service account key: {matches}"
+
+
+class TestEnvFileStructure:
+    """Tests for environment file structure and formatting."""
+    
+    def test_root_env_example_has_comments(self):
+        """Verify root .env.example has explanatory comments."""
+        with open('.env.example', 'r') as f:
+            content = f.read()
+        
+        # Check for section comments
+        assert '# Server Configuration' in content or '# Server' in content, "Should have server section comment"
+        assert '# Database' in content or '# MongoDB' in content, "Should have database section comment"
+        assert '# JWT' in content or 'JWT Secret' in content, "Should have JWT section comment"
+    
+    def test_client_env_example_has_comments(self):
+        """Verify client .env.example has explanatory comments."""
+        with open('client/.env.example', 'r') as f:
+            content = f.read()
+        
+        assert '# Client-side' in content or '# Client' in content, "Should have client-side comment"
+        assert 'REACT_APP_' in content and 'Note:' in content, "Should explain REACT_APP_ prefix requirement"
+    
+    def test_env_examples_have_consistent_ports(self):
+        """Verify server and client env examples use consistent ports."""
+        with open('.env.example', 'r') as f:
+            root_content = f.read()
+        
+        with open('client/.env.example', 'r') as f:
+            client_content = f.read()
+        
+        # Extract PORT from root
+        root_port = None
+        for line in root_content.split('\n'):
+            if line.startswith('PORT='):
+                root_port = line.split('=')[1].strip()
+                break
+        
+        # Extract REACT_APP_API_URL from client
+        client_url = None
+        for line in client_content.split('\n'):
+            if line.startswith('REACT_APP_API_URL='):
+                client_url = line.split('=')[1].strip()
+                break
+        
+        if root_port and client_url:
+            assert root_port in client_url, f"Client API URL should reference server PORT {root_port}"
+
+
+# Optional: Load tests if python-dotenv is available
+@pytest.mark.skipif(
+    not os.path.exists('.env.example'), 
+    reason=".env.example not found"
+)
+class TestEnvExampleParsing:
+    """Tests to verify .env.example can be parsed (if using python-dotenv)."""
+    
+    def test_root_env_example_syntax(self):
+        """Verify root .env.example has valid syntax (KEY=VALUE format)."""
+        with open('.env.example', 'r') as f:
+            lines = f.readlines()
+        
+        for line_num, line in enumerate(lines, 1):
+            line = line.strip()
+            # Skip empty lines and comments
+            if not line or line.startswith('#'):
+                continue
+            
+            # Check for valid KEY=VALUE format
+            assert '=' in line, f"Line {line_num}: Invalid format (expected KEY=VALUE): {line}"
+            
+            key = line.split('=')[0]
+            assert key.isupper() or '_' in key, f"Line {line_num}: Key should be uppercase with underscores: {key}"
+    
+    def test_client_env_example_syntax(self):
+        """Verify client .env.example has valid syntax."""
+        with open('client/.env.example', 'r') as f:
+            lines = f.readlines()
+        
+        for line_num, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            if '=' in line:
+                key = line.split('=')[0]
+                # Client vars should start with REACT_APP_
+                if not key.startswith('#'):
+                    assert key.startswith('REACT_APP_'), f"Line {line_num}: Client env var should start with REACT_APP_: {key}"
