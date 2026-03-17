@@ -1,204 +1,174 @@
-# AgriConnect
+# agri-connect
+# Agri-Connect 🌾
 
-AgriConnect is a comprehensive digital marketplace platform designed to connect farmers directly with buyers, eliminating middlemen and ensuring fair prices for agricultural products.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/pankajydv07/agri-connect/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-orange)](https://github.com/pankajydv07/agri-connect/releases)
 
-## Key Innovation: Voice-Based Intelligent Assistant
+> A comprehensive digital platform connecting farmers, buyers, and agricultural service providers to revolutionize the agricultural supply chain.
 
-**AgriConnect's voice-based chatbot** is a groundbreaking feature that revolutionizes how farmers interact with technology:
+## 🌱 Overview
 
-- **Speech-to-Text & Text-to-Speech**: Allows farmers with limited literacy to use voice commands in their native language
-- **Role-Based Intelligence**: Automatically detects whether you're a farmer or buyer and adapts functionality accordingly
-- **Multilingual Support**: Operates in English, Hindi, and Telugu to serve diverse rural communities
-- **Function-Rich Interface**: Performs complex tasks like product management and order tracking through simple voice instructions
+Agri-Connect bridges the gap between agricultural producers and consumers, providing real-time market data, seamless crop listings, and direct communication channels. Our platform empowers farmers with technology to maximize their profits while ensuring buyers get quality produce at fair prices.
 
-This technology bridges the digital divide for rural farmers who may have limited literacy or technical skills, making advanced e-commerce accessible to all.
+## ✨ Key Features
 
-## Project Overview
+- **📊 Crop Listings & Marketplace**: List and browse agricultural products with detailed specifications
+- **💰 Real-time Price Tracking**: Live market prices and historical trend analysis
+- **🤝 Direct Farmer-Buyer Connection**: Eliminate middlemen with direct communication channels
+- **📱 Mobile-First Design**: Responsive interface optimized for rural connectivity
+- **🔍 Advanced Search & Filters**: Find products by location, category, price range, and quality grade
+- **📈 Analytics Dashboard**: Track sales, inventory, and market trends
+- **🔐 Secure Authentication**: Role-based access for farmers, buyers, and administrators
+- **🌐 Multi-language Support**: Regional language support for better accessibility
 
-AgriConnect aims to revolutionize the agricultural supply chain by:
-- Providing farmers with a direct channel to sell their products
-- Enabling buyers to source fresh, local produce directly from farmers
-- Supporting sustainable and organic farming practices
-- Offering educational resources about organic farming methods
-- Facilitating transparent and efficient ordering and delivery processes
-- **Empowering users through voice-command technology** to overcome literacy and technical barriers
+## 🛠️ Tech Stack
 
-## Features
+- **Frontend**: React.js, Redux, Tailwind CSS
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB / PostgreSQL
+- **Authentication**: JWT, OAuth 2.0
+- **Cloud Storage**: AWS S3 / Cloudinary
+- **Real-time**: Socket.io
+- **Testing**: Jest, Cypress
 
-### Voice Assistant Capabilities
-
-#### For Farmers
-- **Add Products**: "I want to sell 50 kg of organic tomatoes for 40 rupees per kg"
-- **Update Products**: "Change the price of my tomatoes to 45 rupees" (work in progress)
-- **Check Orders**: "Show me all my pending orders" or "What orders came in today?"(work in progress)
-- **Get Farming Tips**: "How do I deal with aphids on my tomato plants?"
-- **Weather Forecasts**: "What's the weather forecast for Hyderabad for the next 3 days?"(work in progress)
-
-#### For Buyers- (work in progress)
-- **Search Products**: "Find organic vegetables under 50 rupees per kg"
-- **Place Orders**: "I want to order 10 kg of those tomatoes"
-- **Track Orders**: "What's the status of my order number 12345?"
-- **Get Product Information**: "Tell me more about the organic farming methods used"
-
-### Platform Features
-
-#### For Farmers
-- Complete product management (add, edit, delete)
-- Order fulfillment workflow
-- Profile management
-- Sales analytics dashboard
-
-#### For Buyers
-- Browse marketplace products
-- View detailed product information
-- Place and track orders
-- Manage profile and preferences
-
-#### For Administrators
-- User management and verification
-- Content moderation
-- System monitoring
-- Analytics dashboard
-
-### General Features
-- Multilingual interface (English, Hindi, Telugu)
-- Secure authentication and authorization
-- Responsive design for mobile, tablet and desktop
-- Image upload for products with cloud storage
-- Transparent pricing and transaction history
-
-## Technical Implementation
-
-### Voice Assistant Architecture
-- **Speech-to-Text**: Powered by AssemblyAI for accurate transcription in multiple languages
-- **Natural Language Processing**: OpenAI GPT models for understanding user intent and context
-- **Function Calling**: Structured actions mapped to platform functionality
-- **Text-to-Speech**: ElevenLabs voices for natural-sounding responses
-
-### Tech Stack
-
-#### Frontend
-- React.js with Redux for state management
-- React Router for navigation
-- Tailwind CSS for responsive design
-- i18next for internationalization
-- OpenAI API integration for intelligent chatbot
-- Web Speech API and third-party voice services
-
-#### Backend
-- Node.js with Express
-- MongoDB for database
-- Mongoose ORM
-- JWT for authentication
-- Multer for file uploads
-- Cloudinary for image storage
-
-## Getting Started
+## 🚀 Installation
 
 ### Prerequisites
-- Node.js (v14.0.0 or higher)
+
+- Node.js (v14.0 or higher)
 - npm or yarn
-- MongoDB instance
-- API keys for OpenAI, AssemblyAI, and ElevenLabs
+- MongoDB (v4.4 or higher) or PostgreSQL
+- Git
 
-### Installation
+### Setup Instructions
 
-1. Clone the repository
-```
-git clone https://github.com/yourusername/agri-connect.git
-cd agri-connect
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/pankajydv07/agri-connect.git
+   cd agri-connect
+   ```
+
+2. **Install dependencies**
+   ```bash
+   # Install server dependencies
+   cd server
+   npm install
+
+   # Install client dependencies
+   cd ../client
+   npm install
+   ```
+
+3. **Environment Configuration**
+   
+   Create `.env` file in the server directory:
+   ```env
+   PORT=5000
+   MONGODB_URI=mongodb://localhost:27017/agri-connect
+   JWT_SECRET=your_jwt_secret_key
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   ```
+
+4. **Database Setup**
+   ```bash
+   # If using MongoDB locally
+   mongod
+
+   # Or configure MongoDB Atlas connection string in .env
+   ```
+
+5. **Run the application**
+   ```bash
+   # Start server (from server directory)
+   npm run dev
+
+   # Start client (from client directory)
+   npm start
+   ```
+
+6. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000
+
+## 📖 Usage
+
+### For Farmers
+
+1. Register as a farmer account
+2. Complete profile with farm details and location
+3. Add crop listings with images, quantity, and expected price
+4. Manage inventory through the dashboard
+5. Respond to buyer inquiries and negotiate prices
+
+### For Buyers
+
+1. Create a buyer account
+2. Browse available crops using filters
+3. View farmer profiles and ratings
+4. Contact farmers directly through the platform
+5. Track orders and payment status
+
+### API Example
+
+```javascript
+// Get all crop listings
+GET /api/v1/crops?page=1&limit=10&category=vegetables
+
+// Response
+{
+  "success": true,
+  "data": [
+    {
+      "id": "123",
+      "name": "Organic Tomatoes",
+      "farmer": "John Doe",
+      "price": 25.00,
+      "unit": "kg",
+      "location": "Punjab, India",
+      "available": true
+    }
+  ]
+}
 ```
 
-2. Install dependencies for the root, client, and server
-```
-npm install
-cd client && npm install
-cd ../server && npm install
-```
+## 📚 API Documentation
 
-3. Create .env file in the server directory with the following variables:
-```
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-CLOUDINARY_CLOUD_NAME=your_cloudinary_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-```
+Detailed API documentation is available at:
+- [API Docs](https://documenter.getpostman.com/view/your-api-docs)
+- [Swagger UI](http://localhost:5000/api-docs) (when running locally)
 
-4. Create .env file in the client directory with the following variables:
-```
-REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_OPENAI_API_KEY=your_openai_api_key
-REACT_APP_ASSEMBLYAI_API_KEY=your_assemblyai_api_key
-REACT_APP_ELEVENLABS_API_KEY=your_elevenlabs_api_key
-```
+## 🤝 Contributing
 
-### Running the Application
-
-#### Development Mode
-1. Start the server:
-```
-cd server
-npm run dev
-```
-
-2. Start the client (in a new terminal):
-```
-cd client
-npm start
-```
-
-#### Production Mode
-1. Build the client:
-```
-cd client
-npm run build
-```
-
-2. Start the server:
-```
-cd server
-npm start
-```
-
-## Project Structure
-
-```
-agri-connect/
-├── client/                # Frontend React application
-│   ├── public/            # Static files
-│   └── src/               # React source code
-│       ├── actions/       # Redux actions
-│       ├── components/    # React components
-│       ├── pages/         # Page components
-│       ├── reducers/      # Redux reducers
-│       ├── store/         # Redux store configuration
-│       ├── translations/  # i18n translation files
-│       └── utils/         # Utility functions
-├── server/                # Backend Node.js/Express application
-│   ├── controllers/       # Route controllers
-│   ├── middleware/        # Express middleware
-│   ├── models/            # Mongoose models
-│   ├── routes/            # Express routes
-│   ├── uploads/           # Uploaded files
-│   └── utils/             # Utility functions
-```
-
-## Contributing
+We welcome contributions! Please follow these steps:
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for details.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 📄 License
 
-## Acknowledgements
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- Special thanks to the Code4Change initiative for supporting this project
-- All farmers and agricultural experts who provided domain expertise
-- OpenAI for chatbot capabilities
+## 📞 Contact & Support
+
+- **Project Maintainer**: Pankaj Kumar
+- **Email**: pankajydv07@example.com
+- **GitHub Issues**: [Create an issue](https://github.com/pankajydv07/agri-connect/issues)
+- **Discord Community**: [Join our server](https://discord.gg/agri-connect)
+
+## 🙏 Acknowledgments
+
+- Thanks to all contributors who have helped shape this project
+- Agricultural data sources and market research teams
+- Open source community for the amazing tools and libraries
+
+---
+
+<p align="center">Made with ❤️ for the farming community</p>
