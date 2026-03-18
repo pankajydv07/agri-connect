@@ -1,240 +1,387 @@
-import pytest
-import os
-import re
-from pathlib import Path
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+const { execSync } = require('child_process');
 
-class TestEnvExampleFile:
-    """Tests for .env.example configuration file"""
+// Mock http module before requiring healthcheck
+jest.mock('http');
+
+describe('Docker Setup Validation', () => {
+  const rootDir = path.join(__dirname, '..');
+  
+  describe('Dockerfile', () => {
+    let dockerfile;
     
-    @pytest.fixture
-    def env_path(self):
-        """Fixture providing path to .env.example"""
-        return Path('.env.example')
+    beforeAll(() => {
+      dockerfile = fs.readFileSync(path.join(rootDir, 'Dockerfile'), 'utf8');
+    });
+
+    test('uses multi-stage build with builder and production stages', () => {
+      expect(dockerfile).toMatch(/FROM\s+node:.*AS\s+builder/);
+      expect(dockerfile).toMatch(/FROM\s+node:.*AS\s+production/);
+    });
+
+    test('creates and uses non-root user for security', () => {
+      expect(dockerfile).toContain('addgroup');
+      expect(dockerfile).toContain('adduser');
+      expect(dockerfile).toMatch(/USER\s+nodejs/);
+    });
+
+    test('exposes port 3000', () => {
+      expect(dockerfile).toMatch(/EXPOSE\s+3000/);
+    });
+
+    test('includes healthcheck instruction', () => {
+      expect(dockerfile).toMatch(/HEALTHCHECK/);
+      expect(dockerfile).toContain('healthcheck.js');
+    });
+
+    test('uses npm ci for deterministic installs', () => {
+      expect(dockerfile).toContain('npm ci');
+    });
+
+    test('copies package files before source for layer caching', () => {
+      const lines = dockerfile.split('\n');
+      const packageCopyIndex = lines.findIndex(l => l.includes('COPY package'));
+      const sourceCopyIndex = lines.findIndex(l => l.includes('COPY .') && !l.includes('package'));
+      expect(packageCopyIndex).toBeLessThan(sourceCopyIndex);
+    });
+  });
+
+  describe('Docker Compose Configuration', () => {
+    let compose;
     
-    @pytest.fixture
-    def env_content(self, env_path):
-        """Fixture providing content of .env.example"""
-        if not env_path.exists():
-            pytest.skip(".env.example file does not exist")
-        return env_path.read_text(encoding='utf-8')
+    beforeAll(() => {
+      const composeFile = fs.readFileSync(path.join(rootDir, 'docker-compose.yml'), 'utf8');
+      compose = yaml.load(composeFile);
+    });
+
+    test('defines version 3.8', () => {
+      expect(compose.version).toBe('3.8');
+    });
+
+    test('has app and db services', () => {
+      expect(compose.services.app).toBeDefined();
+      expect(compose.services.db).toBeDefined();
+    });
+
+    test('app service targets production stage', () => {
+      expect(compose.services.app.build.target).toBe('production');
+    });
+
+    test('app depends on db with healthcheck condition', () => {
+      expect(compose.services.app.depends_on.db.condition).toBe('service_healthy');
+    });
+
+    test('db service uses postgres:15-alpine image', () => {
+      expect(compose.services.db.image).toBe('postgres:15-alpine');
+    });
+
+    test('db has healthcheck configured', () => {
+      expect(compose.services.db.healthcheck).toBeDefined();
+      expect(compose.services.db.healthcheck.test).toContain('pg_isready');
+      expect(compose.services.db.healthcheck.interval).toBe('5s');
+    });
+
+    test('volumes are configured for data persistence', () => {
+      expect(compose.volumes.postgres_data).toBeDefined();
+      expect(compose.volumes.uploads).toBeDefined();
+    });
+
+    test('custom network is defined', () => {
+      expect(compose.networks['agri-network']).toBeDefined();
+      expect(compose.networks['agri-network'].driver).toBe('bridge');
+    });
+
+    test('environment variables use proper defaults', () => {
+      const appEnv = compose.services.app.environment;
+      const dbEnv = compose.services.db.environment;
+      
+      // Check that DB_HOST is set to 'db' for Docker networking
+      const dbHostVar = appEnv.find(e => typeof e === 'string' && e.startsWith('DB_HOST='));
+      expect(dbHostVar).toBe('DB_HOST=db');
+      
+      // Check PostgreSQL defaults
+      expect(dbEnv).toContain('POSTGRES_DB=${DB_NAME:-agriconnect}');
+    });
+
+    test('app service has restart policy', () => {
+      expect(compose.services.app.restart).toBe('unless-stopped');
+    });
+
+    test('db service mounts initialization scripts', () => {
+      const volumes = compose.services.db.volumes;
+      const initMount = volumes.find(v => v.includes('docker-entrypoint-initdb.d'));
+      expect(initMount).toBeDefined();
+    });
+  });
+
+  describe('Healthcheck Script', () => {
+    beforeEach(() => {
+      jest.resetModules();
+      delete require.cache[require.resolve('../healthcheck.js')];
+    });
+
+    afterEach(() => {
+      delete process.env.PORT;
+    });
+
+    test('makes HTTP request to /health endpoint', () => {
+      const mockRequest = {
+        on: jest.fn().mockReturnThis(),
+        end: jest.fn()
+      };
+      
+      let capturedOptions;
+      http.request = jest.fn((options, callback) => {
+        capturedOptions = options;
+        callback({ statusCode: 200 });
+        return mockRequest;
+      });
+
+      jest.spyOn(process, 'exit').mockImplementation(() => {});
+      
+      require('../healthcheck.js');
+      
+      expect(capturedOptions.path).toBe('/health');
+      expect(capturedOptions.method).toBe('GET');
+      expect(capturedOptions.host).toBe('localhost');
+      expect(capturedOptions.timeout).toBe(2000);
+    });
+
+    test('exits with code 0 on successful health check', () => {
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      
+      http.request = jest.fn((options, callback) => {
+        callback({ statusCode: 200 });
+        return { on: jest.fn().mockReturnThis(), end: jest.fn() };
+      });
+
+      require('../healthcheck.js');
+      
+      expect(mockExit).toHaveBeenCalledWith(0);
+    });
+
+    test('exits with code 1 on failed health check (non-200 status)', () => {
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      
+      http.request = jest.fn((options, callback) => {
+        callback({ statusCode: 503 });
+        return { on: jest.fn().mockReturnThis(), end: jest.fn() };
+      });
+
+      require('../healthcheck.js');
+      
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    test('exits with code 1 on request error', () => {
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      const mockRequest = {
+        on: jest.fn((event, handler) => {
+          if (event === 'error') handler(new Error('Connection refused'));
+          return mockRequest;
+        }),
+        end: jest.fn()
+      };
+      
+      http.request = jest.fn(() => mockRequest);
+
+      require('../healthcheck.js');
+      
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    test('exits with code 1 on request timeout', () => {
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      const mockDestroy = jest.fn();
+      const mockRequest = {
+        on: jest.fn((event, handler) => {
+          if (event === 'timeout') {
+            handler();
+          }
+          return mockRequest;
+        }),
+        destroy: mockDestroy,
+        end: jest.fn()
+      };
+      
+      http.request = jest.fn(() => mockRequest);
+
+      require('../healthcheck.js');
+      
+      expect(mockDestroy).toHaveBeenCalled();
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    test('uses PORT environment variable when set', () => {
+      process.env.PORT = '8080';
+      let capturedOptions;
+      
+      http.request = jest.fn((options, callback) => {
+        capturedOptions = options;
+        callback({ statusCode: 200 });
+        return { on: jest.fn().mockReturnThis(), end: jest.fn() };
+      });
+      
+      jest.spyOn(process, 'exit').mockImplementation(() => {});
+
+      require('../healthcheck.js');
+      
+      expect(capturedOptions.port).toBe('8080');
+    });
+
+    test('defaults to port 3000 when PORT not set', () => {
+      let capturedOptions;
+      
+      http.request = jest.fn((options, callback) => {
+        capturedOptions = options;
+        callback({ statusCode: 200 });
+        return { on: jest.fn().mockReturnThis(), end: jest.fn() };
+      });
+      
+      jest.spyOn(process, 'exit').mockImplementation(() => {});
+
+      require('../healthcheck.js');
+      
+      expect(capturedOptions.port).toBe(3000);
+    });
+  });
+
+  describe('Database Initialization', () => {
+    let sqlContent;
     
-    @pytest.fixture
-    def parsed_vars(self, env_content):
-        """Parse environment variables from content"""
-        variables = {}
-        for line in env_content.splitlines():
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                variables[key.strip()] = value.strip()
-        return variables
+    beforeAll(() => {
+      sqlContent = fs.readFileSync(
+        path.join(rootDir, 'docker-entrypoint-initdb.d/init.sql'), 
+        'utf8'
+      );
+    });
 
-    def test_file_exists_in_root(self, env_path):
-        """Test that .env.example file exists in root directory"""
-        assert env_path.exists(), ".env.example should exist in repository root"
-        assert env_path.is_file(), ".env.example should be a regular file"
+    test('creates users table with required columns', () => {
+      expect(sqlContent).toMatch(/CREATE TABLE IF NOT EXISTS users/i);
+      expect(sqlContent).toContain('id SERIAL PRIMARY KEY');
+      expect(sqlContent).toContain('email VARCHAR(255) UNIQUE NOT NULL');
+      expect(sqlContent).toContain('password_hash VARCHAR(255) NOT NULL');
+      expect(sqlContent).toContain('role VARCHAR(50)');
+    });
 
-    def test_file_is_not_empty(self, env_content):
-        """Test that file has content"""
-        assert len(env_content) > 0, ".env.example should not be empty"
-        assert len(env_content) > 100, ".env.example should contain substantial documentation"
+    test('creates products table with foreign key to users', () => {
+      expect(sqlContent).toMatch(/CREATE TABLE IF NOT EXISTS products/i);
+      expect(sqlContent).toContain('farmer_id INTEGER REFERENCES users(id) ON DELETE CASCADE');
+      expect(sqlContent).toContain('price DECIMAL(10, 2)');
+    });
 
-    def test_contains_server_configuration_section(self, env_content):
-        """Test Server Configuration section exists with required variables"""
-        assert "Server Configuration" in env_content, "Should have Server Configuration section"
-        assert "PORT=" in env_content, "Should define PORT"
-        assert "NODE_ENV=" in env_content, "Should define NODE_ENV"
-        assert "BASE_URL=" in env_content, "Should define BASE_URL"
+    test('creates indexes for performance optimization', () => {
+      expect(sqlContent).toMatch(/CREATE INDEX IF NOT EXISTS idx_users_email/i);
+      expect(sqlContent).toMatch(/CREATE INDEX IF NOT EXISTS idx_products_farmer/i);
+      expect(sqlContent).toMatch(/CREATE INDEX IF NOT EXISTS idx_products_category/i);
+    });
 
-    def test_contains_google_cloud_section(self, env_content):
-        """Test Google Cloud Speech configuration section"""
-        assert "Google Cloud Speech" in env_content, "Should have Google Cloud Speech section"
-        assert "GOOGLE_APPLICATION_CREDENTIALS=" in env_content, "Should define GOOGLE_APPLICATION_CREDENTIALS"
-        assert "GOOGLE_CLOUD_PROJECT_ID=" in env_content, "Should define GOOGLE_CLOUD_PROJECT_ID"
-        assert "GOOGLE_CLOUD_SPEECH_REGION=" in env_content, "Should define GOOGLE_CLOUD_SPEECH_REGION"
+    test('includes timestamps on tables', () => {
+      expect(sqlContent).toContain('created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+      expect(sqlContent).toContain('updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    });
+  });
 
-    def test_contains_database_section(self, env_content):
-        """Test Database Configuration section"""
-        assert "Database Configuration" in env_content, "Should have Database Configuration section"
-        assert "DATABASE_URL=" in env_content, "Should define DATABASE_URL"
+  describe('Environment Configuration', () => {
+    let envContent;
+    
+    beforeAll(() => {
+      envContent = fs.readFileSync(path.join(rootDir, '.env.example'), 'utf8');
+    });
 
-    def test_contains_security_section(self, env_content):
-        """Test Security Configuration section with sensitive variables"""
-        assert "Security Configuration" in env_content, "Should have Security Configuration section"
-        assert "JWT_SECRET=" in env_content, "Should define JWT_SECRET"
-        assert "SESSION_SECRET=" in env_content, "Should define SESSION_SECRET"
-        assert "CORS_ORIGIN=" in env_content, "Should define CORS_ORIGIN"
+    test('contains all required database variables', () => {
+      expect(envContent).toContain('DB_HOST=');
+      expect(envContent).toContain('DB_PORT=');
+      expect(envContent).toContain('DB_NAME=');
+      expect(envContent).toContain('DB_USER=');
+      expect(envContent).toContain('DB_PASSWORD=');
+    });
 
-    def test_contains_client_side_variables(self, env_content):
-        """Test Client-Side Environment Variables section"""
-        assert "Client-Side Environment Variables" in env_content, "Should have Client-Side section"
-        assert "REACT_APP_API_URL=" in env_content, "Should define REACT_APP_API_URL"
-        assert "REACT_APP_ENVIRONMENT=" in env_content, "Should define REACT_APP_ENVIRONMENT"
+    test('contains JWT secret configuration', () => {
+      expect(envContent).toContain('JWT_SECRET=');
+    });
 
-    def test_contains_file_upload_config(self, env_content):
-        """Test File Upload Configuration section"""
-        assert "File Upload Configuration" in env_content, "Should have File Upload Configuration section"
-        assert "UPLOAD_PATH=" in env_content, "Should define UPLOAD_PATH"
-        assert "MAX_FILE_SIZE=" in env_content, "Should define MAX_FILE_SIZE"
+    test('documents Docker-specific configuration', () => {
+      expect(envContent).toContain('DB_HOST=db');
+      expect(envContent).toContain('When running in Docker');
+    });
 
-    def test_contains_api_configuration(self, env_content):
-        """Test API Configuration section for axios"""
-        assert "API Configuration" in env_content, "Should have API Configuration section"
-        assert "EXTERNAL_API_BASE_URL=" in env_content, "Should define EXTERNAL_API_BASE_URL"
-        assert "EXTERNAL_API_KEY=" in env_content, "Should define EXTERNAL_API_KEY"
+    test('has NODE_ENV configuration', () => {
+      expect(envContent).toContain('NODE_ENV=');
+    });
 
-    def test_has_descriptive_comments(self, env_content):
-        """Test that variables have descriptive comments above them"""
-        lines = env_content.splitlines()
-        comment_count = sum(1 for line in lines if line.strip().startswith('#'))
-        assert comment_count >= 20, "Should have extensive comments documenting variables"
-        
-        # Check for section headers (lines with === or ---)
-        section_headers = [line for line in lines if '===' in line or '---' in line]
-        assert len(section_headers) >= 6, "Should have section header separators"
+    test('has PORT configuration', () => {
+      expect(envContent).toContain('PORT=');
+    });
+  });
 
-    def test_placeholder_values_for_secrets(self, parsed_vars):
-        """Test that sensitive variables use placeholder/example values"""
-        sensitive_patterns = ['SECRET', 'KEY', 'PASSWORD', 'CREDENTIALS']
-        
-        for key, value in parsed_vars.items():
-            if any(pattern in key for pattern in sensitive_patterns):
-                # Should not look like a real secret (long random string)
-                if len(value) > 20 and not any(x in value.lower() for x in ['your', 'example', 'change', 'placeholder', 'localhost']):
-                    assert False, f"{key} should use placeholder value, not real secret"
-                
-                # Should contain indication it's a placeholder
-                assert any(x in value.lower() for x in ['your', 'example', 'change', 'placeholder']) or \
-                       'localhost' in value or 'development' in value or 'test' in value, \
-                       f"{key} should indicate it needs to be changed"
+  describe('Docker Ignore', () => {
+    let ignoreContent;
+    
+    beforeAll(() => {
+      ignoreContent = fs.readFileSync(path.join(rootDir, '.dockerignore'), 'utf8');
+    });
 
-    def test_valid_env_syntax(self, env_content):
-        """Test that file follows standard .env syntax"""
-        lines = env_content.splitlines()
-        
-        for i, line in enumerate(lines, 1):
-            stripped = line.strip()
-            
-            # Skip empty lines and comments
-            if not stripped or stripped.startswith('#'):
-                continue
-            
-            # Must contain = for variable assignment
-            assert '=' in line, f"Line {i} is not a valid env variable (missing =): {line}"
-            
-            # Extract key
-            key = line.split('=', 1)[0].strip()
-            
-            # Key should follow standard naming convention (uppercase with underscores)
-            assert re.match(r'^[A-Z][A-Z0-9_]*$', key) or \
-                   re.match(r'^REACT_APP_[A-Z][A-Z0-9_]*$', key), \
-                   f"Key '{key}' on line {i} should follow UPPER_SNAKE_CASE convention"
+    test('excludes node_modules', () => {
+      expect(ignoreContent).toContain('node_modules');
+    });
 
-    def test_port_value_is_numeric(self, parsed_vars):
-        """Test that PORT has a numeric example value"""
-        if 'PORT' in parsed_vars:
-            port_val = parsed_vars['PORT']
-            assert port_val.isdigit(), f"PORT should have numeric example value, got: {port_val}"
-            assert 1000 <= int(port_val) <= 65535, "PORT should be in valid range (1000-65535)"
+    test('excludes environment files', () => {
+      expect(ignoreContent).toContain('.env');
+      expect(ignoreContent).toContain('.env.local');
+      expect(ignoreContent).toContain('.env.development');
+    });
 
-    def test_node_env_valid_options(self, parsed_vars):
-        """Test NODE_ENV has valid example value"""
-        if 'NODE_ENV' in parsed_vars:
-            valid_envs = ['development', 'production', 'test']
-            env_val = parsed_vars['NODE_ENV'].lower()
-            assert env_val in valid_envs, f"NODE_ENV example should be one of {valid_envs}, got: {env_val}"
+    test('excludes git directory', () => {
+      expect(ignoreContent).toContain('.git');
+    });
 
-    def test_upload_path_references_gitignored_directory(self, env_content):
-        """Test that UPLOAD_PATH references the uploads directory mentioned in .gitignore"""
-        assert "UPLOAD_PATH=" in env_content, "Should define UPLOAD_PATH"
-        # Check if uploads is mentioned in the value or comments
-        assert "uploads" in env_content.lower() or "upload" in env_content.lower(), \
-            "Should reference uploads directory"
+    test('excludes build artifacts', () => {
+      expect(ignoreContent).toContain('dist');
+      expect(ignoreContent).toContain('build');
+    });
 
-    def test_react_app_variables_prefixed(self, parsed_vars):
-        """Test that client-side variables use REACT_APP_ prefix"""
-        client_vars = [k for k in parsed_vars.keys() if any(x in k.lower() for x in ['react', 'client', 'frontend'])]
-        for var in client_vars:
-            if var not in ['REACT_APP_API_URL', 'REACT_APP_GOOGLE_CLIENT_ID', 'REACT_APP_ENVIRONMENT']:
-                # Allow other REACT_APP_ variables
-                pass
-        
-        # Check that non-REACT_APP variables aren't client-specific
-        non_prefixed_client = [k for k in parsed_vars.keys() 
-                              if any(x in k.lower() for x in ['client', 'frontend', 'react']) 
-                              and not k.startswith('REACT_APP_')]
-        assert len(non_prefixed_client) == 0, f"Client variables should use REACT_APP_ prefix: {non_prefixed_client}"
+    test('excludes log files', () => {
+      expect(ignoreContent).toContain('*.log');
+      expect(ignoreContent).toContain('logs');
+    });
 
-    def test_file_not_in_gitignore(self):
-        """Test that .env.example is not ignored by .gitignore"""
-        gitignore_path = Path('.gitignore')
-        if not gitignore_path.exists():
-            pytest.skip("No .gitignore file found")
-        
-        gitignore_content = gitignore_path.read_text()
-        lines = gitignore_content.splitlines()
-        
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('#') or not stripped:
-                continue
-            
-            # Check if .env.example would be matched
-            if '.env.example' in stripped:
-                assert False, f".env.example should not be in .gitignore: {line}"
-            
-            # Check that .env.example wouldn't match .env.* pattern
-            if stripped == '.env.*' or stripped == '.env*':
-                # This would ignore .env.example, which is bad
-                assert False, f".gitignore pattern '{stripped}' would ignore .env.example"
+    test('excludes Docker files themselves', () => {
+      expect(ignoreContent).toContain('Dockerfile');
+      expect(ignoreContent).toContain('.dockerignore');
+    });
+  });
+});
 
-    def test_database_url_sqlite_example(self, parsed_vars):
-        """Test DATABASE_URL has appropriate SQLite example for development"""
-        if 'DATABASE_URL' in parsed_vars:
-            db_url = parsed_vars['DATABASE_URL']
-            assert 'sqlite' in db_url.lower() or 'postgres' in db_url.lower() or 'mysql' in db_url.lower(), \
-                "DATABASE_URL should show example connection string format"
+// Integration tests - these require Docker to be running
+describe('Docker Integration Tests', () => {
+  test('docker-compose.yml is valid', () => {
+    try {
+      execSync('docker-compose config', { 
+        cwd: path.join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    } catch (error) {
+      throw new Error(`docker-compose.yml validation failed: ${error.stderr?.toString() || error.message}`);
+    }
+  }, 30000);
 
-    def test_max_file_size_is_numeric(self, parsed_vars):
-        """Test MAX_FILE_SIZE has numeric value"""
-        if 'MAX_FILE_SIZE' in parsed_vars:
-            size_val = parsed_vars['MAX_FILE_SIZE']
-            assert size_val.isdigit(), f"MAX_FILE_SIZE should be numeric (bytes), got: {size_val}"
-            assert int(size_val) > 0, "MAX_FILE_SIZE should be positive"
+  test('Dockerfile can be built', () => {
+    // Skip if RUN_DOCKER_TESTS is not set to avoid slow tests in unit test runs
+    if (!process.env.RUN_DOCKER_TESTS) {
+      return;
+    }
 
-    def test_cors_origin_format(self, parsed_vars):
-        """Test CORS_ORIGIN has valid URL format example"""
-        if 'CORS_ORIGIN' in parsed_vars:
-            origin = parsed_vars['CORS_ORIGIN']
-            assert origin.startswith('http://') or origin.startswith('https://'), \
-                f"CORS_ORIGIN should be a valid URL, got: {origin}"
-
-    def test_google_credentials_path_format(self, parsed_vars):
-        """Test GOOGLE_APPLICATION_CREDENTIALS points to JSON file"""
-        if 'GOOGLE_APPLICATION_CREDENTIALS' in parsed_vars:
-            cred_path = parsed_vars['GOOGLE_APPLICATION_CREDENTIALS']
-            assert '.json' in cred_path, \
-                "GOOGLE_APPLICATION_CREDENTIALS should reference a JSON file"
-
-    def test_no_trailing_whitespace(self, env_content):
-        """Test file has no trailing whitespace (code quality)"""
-        lines = env_content.splitlines()
-        for i, line in enumerate(lines, 1):
-            if line != line.rstrip():
-                assert False, f"Line {i} has trailing whitespace"
-
-    def test_file_ends_with_newline(self, env_content):
-        """Test file ends with newline (POSIX standard)"""
-        if env_content:
-            assert env_content.endswith('\n'), "File should end with newline"
-
-    def test_no_duplicate_variables(self, parsed_vars, env_content):
-        """Test that no variable is defined twice"""
-        lines = env_content.splitlines()
-        seen = set()
-        for line in lines:
-            if '=' in line and not line.strip().startswith('#'):
-                key = line.split('=', 1)[0].strip()
-                if key in seen:
-                    assert False, f"Variable {key} is defined multiple times"
-                seen.add(key)
+    try {
+      execSync('docker build -t agri-connect-test .', {
+        cwd: path.join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    } catch (error) {
+      throw new Error(`Docker build failed: ${error.stderr?.toString() || error.message}`);
+    }
+  }, 120000); // 2 minute timeout for build
+});
