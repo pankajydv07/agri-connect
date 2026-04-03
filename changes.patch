@@ -1,240 +1,281 @@
-import pytest
-import os
-import re
-from pathlib import Path
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,28 @@
+ # AgriConnect
+ 
++[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
++[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
++[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
++
++<p align="center">
++  <img src="https://via.placeholder.com/200x200?text=AgriConnect" alt="AgriConnect Logo" width="200"/>
++</p>
++
++<p align="center">
++  <b>Empowering Farmers Through Technology</b><br>
++  A voice-enabled digital marketplace connecting farmers directly with buyers
++</p>
++
++## Table of Contents
++
++- [Overview](#project-overview)
++- [Key Features](#key-innovation-voice-based-intelligent-assistant)
++- [Tech Stack](#tech-stack)
++- [Installation](#installation)
++- [Environment Variables](#environment-variables)
++- [API Documentation](#api-documentation)
++- [Contributing](#contributing)
++- [License](#license)
++
+ AgriConnect is a comprehensive digital marketplace platform designed to connect farmers directly with buyers, eliminating middlemen and ensuring fair prices for agricultural products.
+ 
+ ## Key Innovation: Voice-Based Intelligent Assistant
+@@ -20,6 +42,8 @@ This technology bridges the digital divide for rural farmers who may have limit
+ 
+ ## Project Overview
+ 
++<img src="https://via.placeholder.com/800x400?text=AgriConnect+Dashboard+Preview" alt="Dashboard Preview" width="100%"/>
++
+ AgriConnect aims to revolutionize the agricultural supply chain by:
+ - Providing farmers with a direct channel to sell their products
+ - Enabling buyers to source fresh, local produce directly from farmers
+@@ -28,6 +52,8 @@ AgriConnect aims to revolutionize the agricultural supply chain by:
+ - Facilitating transparent and efficient ordering and delivery processes
+ - **Empowering users through voice-command technology** to overcome literacy and technical barriers
+ 
++---
++
+ ## Features
+ 
+ ### Voice Assistant Capabilities
+@@ -52,6 +78,8 @@ AgriConnect aims to revolutionize the agricultural supply chain by:
+ - **Get Product Information**: "Tell me more about the organic farming methods used"
+ 
++---
++
+ ### Platform Features
+ 
+ #### For Farmers
+@@ -74,4 +102,168 @@ AgriConnect aims to revolutionize the agricultural supply chain by:
+ - Multilingual interface (English, Hindi, Telugu)
+ - Secure authentication and authorization
+ - Responsive design for mobile, tablet and desktop
+-- Image upload for produc\ No newline at end of file
++- Image upload for product listings
++- Real-time notifications for orders and messages
++- Analytics dashboard with sales reports
++- Review and rating system
++
++---
++
++## Tech Stack
++
++### Frontend
++- **React 18+** - Modern UI library with hooks and functional components
++- **React Router** - Client-side routing
++- **Axios** - HTTP client for API communication
++- **Font Awesome** - Icon library
++- **React Markdown** - Markdown rendering for content
++- **React Syntax Highlighter** - Code syntax highlighting
++
++### Backend
++- **Node.js** - JavaScript runtime
++- **Express.js** - Web application framework
++- **SQLite/PostgreSQL** - Database options
++- **Google Cloud Speech-to-Text** - Voice recognition
++- **Multer** - File upload handling
++- **JWT** - Authentication tokens
++
++### DevOps & Tools
++- **Git** - Version control
++- **npm/yarn** - Package management
++- **ESLint** - Code linting
++- **Prettier** - Code formatting
++
++---
++
++## Installation
++
++### Prerequisites
++- Node.js (v18 or higher)
++- npm or yarn
++- Google Cloud account (for speech features)
++- Git
++
++### Quick Start
++
++1. **Clone the repository**
++   ```bash
++   git clone https://github.com/pankajydv07/agri-connect.git
++   cd agri-connect
++   ```
++
++2. **Install server dependencies**
++   ```bash
++   npm install
++   ```
++
++3. **Install client dependencies**
++   ```bash
++   cd client
++   npm install
++   cd ..
++   ```
++
++4. **Set up environment variables**
++   ```bash
++   cp .env.example .env
++   # Edit .env with your configuration
++   ```
++
++5. **Set up Google Cloud credentials**
++   - Download your service account JSON from Google Cloud Console
++   - Place it at `./config/google-cloud-service-account.json`
++   - Update `GOOGLE_APPLICATION_CREDENTIALS` in `.env`
++
++6. **Run database migrations (if applicable)**
++   ```bash
++   npm run migrate
++   ```
++
++7. **Start the development server**
++   ```bash
++   # Run both client and server
++   npm run dev
++   
++   # Or run separately
++   npm run server  # Backend only
++   npm run client  # Frontend only
++   ```
++
++8. **Access the application**
++   - Frontend: http://localhost:3000
++   - Backend API: http://localhost:5000
++   - API Documentation: http://localhost:5000/api/docs
++
++---
++
++## Environment Variables
++
++Create a `.env` file in the root directory. See `.env.example` for all available options:
++
++| Variable | Description | Required |
++|----------|-------------|----------|
++| `PORT` | Server port number | Yes |
++| `NODE_ENV` | Environment mode (development/production) | Yes |
++| `DATABASE_URL` | Database connection string | Yes |
++| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account JSON | For voice features |
++| `GOOGLE_CLOUD_PROJECT_ID` | Google Cloud project ID | For voice features |
++| `JWT_SECRET` | Secret key for JWT tokens | Yes |
++| `REACT_APP_API_URL` | Backend URL for React app | Yes |
++| `UPLOAD_PATH` | Directory for file uploads | Yes |
++| `MAX_FILE_SIZE` | Maximum upload size in bytes | Yes |
 
-class TestEnvExampleFile:
-    """Tests for .env.example configuration file"""
-    
-    @pytest.fixture
-    def env_path(self):
-        """Fixture providing path to .env.example"""
-        return Path('.env.example')
-    
-    @pytest.fixture
-    def env_content(self, env_path):
-        """Fixture providing content of .env.example"""
-        if not env_path.exists():
-            pytest.skip(".env.example file does not exist")
-        return env_path.read_text(encoding='utf-8')
-    
-    @pytest.fixture
-    def parsed_vars(self, env_content):
-        """Parse environment variables from content"""
-        variables = {}
-        for line in env_content.splitlines():
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                variables[key.strip()] = value.strip()
-        return variables
-
-    def test_file_exists_in_root(self, env_path):
-        """Test that .env.example file exists in root directory"""
-        assert env_path.exists(), ".env.example should exist in repository root"
-        assert env_path.is_file(), ".env.example should be a regular file"
-
-    def test_file_is_not_empty(self, env_content):
-        """Test that file has content"""
-        assert len(env_content) > 0, ".env.example should not be empty"
-        assert len(env_content) > 100, ".env.example should contain substantial documentation"
-
-    def test_contains_server_configuration_section(self, env_content):
-        """Test Server Configuration section exists with required variables"""
-        assert "Server Configuration" in env_content, "Should have Server Configuration section"
-        assert "PORT=" in env_content, "Should define PORT"
-        assert "NODE_ENV=" in env_content, "Should define NODE_ENV"
-        assert "BASE_URL=" in env_content, "Should define BASE_URL"
-
-    def test_contains_google_cloud_section(self, env_content):
-        """Test Google Cloud Speech configuration section"""
-        assert "Google Cloud Speech" in env_content, "Should have Google Cloud Speech section"
-        assert "GOOGLE_APPLICATION_CREDENTIALS=" in env_content, "Should define GOOGLE_APPLICATION_CREDENTIALS"
-        assert "GOOGLE_CLOUD_PROJECT_ID=" in env_content, "Should define GOOGLE_CLOUD_PROJECT_ID"
-        assert "GOOGLE_CLOUD_SPEECH_REGION=" in env_content, "Should define GOOGLE_CLOUD_SPEECH_REGION"
-
-    def test_contains_database_section(self, env_content):
-        """Test Database Configuration section"""
-        assert "Database Configuration" in env_content, "Should have Database Configuration section"
-        assert "DATABASE_URL=" in env_content, "Should define DATABASE_URL"
-
-    def test_contains_security_section(self, env_content):
-        """Test Security Configuration section with sensitive variables"""
-        assert "Security Configuration" in env_content, "Should have Security Configuration section"
-        assert "JWT_SECRET=" in env_content, "Should define JWT_SECRET"
-        assert "SESSION_SECRET=" in env_content, "Should define SESSION_SECRET"
-        assert "CORS_ORIGIN=" in env_content, "Should define CORS_ORIGIN"
-
-    def test_contains_client_side_variables(self, env_content):
-        """Test Client-Side Environment Variables section"""
-        assert "Client-Side Environment Variables" in env_content, "Should have Client-Side section"
-        assert "REACT_APP_API_URL=" in env_content, "Should define REACT_APP_API_URL"
-        assert "REACT_APP_ENVIRONMENT=" in env_content, "Should define REACT_APP_ENVIRONMENT"
-
-    def test_contains_file_upload_config(self, env_content):
-        """Test File Upload Configuration section"""
-        assert "File Upload Configuration" in env_content, "Should have File Upload Configuration section"
-        assert "UPLOAD_PATH=" in env_content, "Should define UPLOAD_PATH"
-        assert "MAX_FILE_SIZE=" in env_content, "Should define MAX_FILE_SIZE"
-
-    def test_contains_api_configuration(self, env_content):
-        """Test API Configuration section for axios"""
-        assert "API Configuration" in env_content, "Should have API Configuration section"
-        assert "EXTERNAL_API_BASE_URL=" in env_content, "Should define EXTERNAL_API_BASE_URL"
-        assert "EXTERNAL_API_KEY=" in env_content, "Should define EXTERNAL_API_KEY"
-
-    def test_has_descriptive_comments(self, env_content):
-        """Test that variables have descriptive comments above them"""
-        lines = env_content.splitlines()
-        comment_count = sum(1 for line in lines if line.strip().startswith('#'))
-        assert comment_count >= 20, "Should have extensive comments documenting variables"
-        
-        # Check for section headers (lines with === or ---)
-        section_headers = [line for line in lines if '===' in line or '---' in line]
-        assert len(section_headers) >= 6, "Should have section header separators"
-
-    def test_placeholder_values_for_secrets(self, parsed_vars):
-        """Test that sensitive variables use placeholder/example values"""
-        sensitive_patterns = ['SECRET', 'KEY', 'PASSWORD', 'CREDENTIALS']
-        
-        for key, value in parsed_vars.items():
-            if any(pattern in key for pattern in sensitive_patterns):
-                # Should not look like a real secret (long random string)
-                if len(value) > 20 and not any(x in value.lower() for x in ['your', 'example', 'change', 'placeholder', 'localhost']):
-                    assert False, f"{key} should use placeholder value, not real secret"
-                
-                # Should contain indication it's a placeholder
-                assert any(x in value.lower() for x in ['your', 'example', 'change', 'placeholder']) or \
-                       'localhost' in value or 'development' in value or 'test' in value, \
-                       f"{key} should indicate it needs to be changed"
-
-    def test_valid_env_syntax(self, env_content):
-        """Test that file follows standard .env syntax"""
-        lines = env_content.splitlines()
-        
-        for i, line in enumerate(lines, 1):
-            stripped = line.strip()
-            
-            # Skip empty lines and comments
-            if not stripped or stripped.startswith('#'):
-                continue
-            
-            # Must contain = for variable assignment
-            assert '=' in line, f"Line {i} is not a valid env variable (missing =): {line}"
-            
-            # Extract key
-            key = line.split('=', 1)[0].strip()
-            
-            # Key should follow standard naming convention (uppercase with underscores)
-            assert re.match(r'^[A-Z][A-Z0-9_]*$', key) or \
-                   re.match(r'^REACT_APP_[A-Z][A-Z0-9_]*$', key), \
-                   f"Key '{key}' on line {i} should follow UPPER_SNAKE_CASE convention"
-
-    def test_port_value_is_numeric(self, parsed_vars):
-        """Test that PORT has a numeric example value"""
-        if 'PORT' in parsed_vars:
-            port_val = parsed_vars['PORT']
-            assert port_val.isdigit(), f"PORT should have numeric example value, got: {port_val}"
-            assert 1000 <= int(port_val) <= 65535, "PORT should be in valid range (1000-65535)"
-
-    def test_node_env_valid_options(self, parsed_vars):
-        """Test NODE_ENV has valid example value"""
-        if 'NODE_ENV' in parsed_vars:
-            valid_envs = ['development', 'production', 'test']
-            env_val = parsed_vars['NODE_ENV'].lower()
-            assert env_val in valid_envs, f"NODE_ENV example should be one of {valid_envs}, got: {env_val}"
-
-    def test_upload_path_references_gitignored_directory(self, env_content):
-        """Test that UPLOAD_PATH references the uploads directory mentioned in .gitignore"""
-        assert "UPLOAD_PATH=" in env_content, "Should define UPLOAD_PATH"
-        # Check if uploads is mentioned in the value or comments
-        assert "uploads" in env_content.lower() or "upload" in env_content.lower(), \
-            "Should reference uploads directory"
-
-    def test_react_app_variables_prefixed(self, parsed_vars):
-        """Test that client-side variables use REACT_APP_ prefix"""
-        client_vars = [k for k in parsed_vars.keys() if any(x in k.lower() for x in ['react', 'client', 'frontend'])]
-        for var in client_vars:
-            if var not in ['REACT_APP_API_URL', 'REACT_APP_GOOGLE_CLIENT_ID', 'REACT_APP_ENVIRONMENT']:
-                # Allow other REACT_APP_ variables
-                pass
-        
-        # Check that non-REACT_APP variables aren't client-specific
-        non_prefixed_client = [k for k in parsed_vars.keys() 
-                              if any(x in k.lower() for x in ['client', 'frontend', 'react']) 
-                              and not k.startswith('REACT_APP_')]
-        assert len(non_prefixed_client) == 0, f"Client variables should use REACT_APP_ prefix: {non_prefixed_client}"
-
-    def test_file_not_in_gitignore(self):
-        """Test that .env.example is not ignored by .gitignore"""
-        gitignore_path = Path('.gitignore')
-        if not gitignore_path.exists():
-            pytest.skip("No .gitignore file found")
-        
-        gitignore_content = gitignore_path.read_text()
-        lines = gitignore_content.splitlines()
-        
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('#') or not stripped:
-                continue
-            
-            # Check if .env.example would be matched
-            if '.env.example' in stripped:
-                assert False, f".env.example should not be in .gitignore: {line}"
-            
-            # Check that .env.example wouldn't match .env.* pattern
-            if stripped == '.env.*' or stripped == '.env*':
-                # This would ignore .env.example, which is bad
-                assert False, f".gitignore pattern '{stripped}' would ignore .env.example"
-
-    def test_database_url_sqlite_example(self, parsed_vars):
-        """Test DATABASE_URL has appropriate SQLite example for development"""
-        if 'DATABASE_URL' in parsed_vars:
-            db_url = parsed_vars['DATABASE_URL']
-            assert 'sqlite' in db_url.lower() or 'postgres' in db_url.lower() or 'mysql' in db_url.lower(), \
-                "DATABASE_URL should show example connection string format"
-
-    def test_max_file_size_is_numeric(self, parsed_vars):
-        """Test MAX_FILE_SIZE has numeric value"""
-        if 'MAX_FILE_SIZE' in parsed_vars:
-            size_val = parsed_vars['MAX_FILE_SIZE']
-            assert size_val.isdigit(), f"MAX_FILE_SIZE should be numeric (bytes), got: {size_val}"
-            assert int(size_val) > 0, "MAX_FILE_SIZE should be positive"
-
-    def test_cors_origin_format(self, parsed_vars):
-        """Test CORS_ORIGIN has valid URL format example"""
-        if 'CORS_ORIGIN' in parsed_vars:
-            origin = parsed_vars['CORS_ORIGIN']
-            assert origin.startswith('http://') or origin.startswith('https://'), \
-                f"CORS_ORIGIN should be a valid URL, got: {origin}"
-
-    def test_google_credentials_path_format(self, parsed_vars):
-        """Test GOOGLE_APPLICATION_CREDENTIALS points to JSON file"""
-        if 'GOOGLE_APPLICATION_CREDENTIALS' in parsed_vars:
-            cred_path = parsed_vars['GOOGLE_APPLICATION_CREDENTIALS']
-            assert '.json' in cred_path, \
-                "GOOGLE_APPLICATION_CREDENTIALS should reference a JSON file"
-
-    def test_no_trailing_whitespace(self, env_content):
-        """Test file has no trailing whitespace (code quality)"""
-        lines = env_content.splitlines()
-        for i, line in enumerate(lines, 1):
-            if line != line.rstrip():
-                assert False, f"Line {i} has trailing whitespace"
-
-    def test_file_ends_with_newline(self, env_content):
-        """Test file ends with newline (POSIX standard)"""
-        if env_content:
-            assert env_content.endswith('\n'), "File should end with newline"
-
-    def test_no_duplicate_variables(self, parsed_vars, env_content):
-        """Test that no variable is defined twice"""
-        lines = env_content.splitlines()
-        seen = set()
-        for line in lines:
-            if '=' in line and not line.strip().startswith('#'):
-                key = line.split('=', 1)[0].strip()
-                if key in seen:
-                    assert False, f"Variable {key} is defined multiple times"
-                seen.add(key)
++> **Note:** All client-side environment variables must start with `REACT_APP_` to be accessible in React.
++
++---
++
++## API Documentation
++
++### Authentication Endpoints
++| Method | Endpoint | Description |
++|--------|----------|-------------|
++| POST | `/api/auth/register` | Register new user |
++| POST | `/api/auth/login` | User login |
++| POST | `/api/auth/google` | Google OAuth login |
++| GET | `/api/auth/profile` | Get user profile |
++| PUT | `/api/auth/profile` | Update profile |
++
++### Product Endpoints
++| Method | Endpoint | Description |
++|--------|----------|-------------|
++| GET | `/api/products` | List all products |
++| GET | `/api/products/:id` | Get product details |
++| POST | `/api/products` | Create new product (Farmer only) |
++| PUT | `/api/products/:id` | Update product (Farmer only) |
++| DELETE | `/api/products/:id` | Delete product (Farmer only) |
++| GET | `/api/products/search` | Search products |
++
++### Order Endpoints
++| Method | Endpoint | Description |
++|--------|----------|-------------|
++| GET | `/api/orders` | Get user orders |
++| POST | `/api/orders` | Place new order |
++| GET | `/api/orders/:id` | Get order details |
++| PUT | `/api/orders/:id/status` | Update order status |
++
++### Voice Assistant Endpoints
++| Method | Endpoint | Description |
++|--------|----------|-------------|
++| POST | `/api/voice/process` | Process voice command |
++| POST | `/api/voice/speech-to-text` | Convert speech to text |
++| POST | `/api/voice/text-to-speech` | Convert text to speech |
++| GET | `/api/voice/languages` | Get supported languages |
++
++---
++
++## Contributing
++
++We welcome contributions! Please follow these steps:
++
++1. **Fork the repository**
++2. **Create a feature branch**
++   ```bash
++   git checkout -b feature/amazing-feature
++   ```
++3. **Commit your changes**
++   ```bash
++   git commit -m 'Add amazing feature'
++   ```
++4. **Push to the branch**
++   ```bash
++   git push origin feature/amazing-feature
++   ```
++5. **Open a Pull Request**
++
++### Code Style
++- Follow ESLint configuration
++- Use Prettier for formatting
++- Write meaningful commit messages
++- Add tests for new features
++- Update documentation as needed
++
++---
++
++## Roadmap
++
++- [x] Voice-based product management
++- [x] Multilingual support (English, Hindi, Telugu)
++- [ ] Mobile app (React Native)
++- [ ] AI-powered price recommendations
++- [ ] Blockchain-based supply chain tracking
++- [ ] Integration with government schemes
++- [ ] Weather-based farming alerts
++- [ ] Community forum for farmers
++
++---
++
++## Support
++
++For support, email support@agriconnect.com or join our Slack channel.
++
++**Report Issues:** [GitHub Issues](https://github.com/pankajydv07/agri-connect/issues)
++
++---
++
++## License
++
++This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
++
++---
++
++## Acknowledgments
++
++- Thanks to all the farmers who provided feedback during development
++- Google Cloud for speech recognition APIs
++- Open source community for amazing tools and libraries
++- Contributors who helped improve this project
++
++<p align="center">
++  Made with ❤️ for Farmers
++</p>
