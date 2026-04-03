@@ -1,204 +1,273 @@
-# AgriConnect
+ # AgriConnect
+ 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 
-AgriConnect is a comprehensive digital marketplace platform designed to connect farmers directly with buyers, eliminating middlemen and ensuring fair prices for agricultural products.
+<p align="center">
+  <img src="https://via.placeholder.com/200x200?text=AgriConnect" alt="AgriConnect Logo" width="200"/>
+</p>
 
-## Key Innovation: Voice-Based Intelligent Assistant
+<p align="center">
+  <b>Empowering Farmers Through Technology</b><br>
+  A voice-enabled digital marketplace connecting farmers directly with buyers
+</p>
 
-**AgriConnect's voice-based chatbot** is a groundbreaking feature that revolutionizes how farmers interact with technology:
+## Table of Contents
 
-- **Speech-to-Text & Text-to-Speech**: Allows farmers with limited literacy to use voice commands in their native language
-- **Role-Based Intelligence**: Automatically detects whether you're a farmer or buyer and adapts functionality accordingly
-- **Multilingual Support**: Operates in English, Hindi, and Telugu to serve diverse rural communities
-- **Function-Rich Interface**: Performs complex tasks like product management and order tracking through simple voice instructions
+- [Overview](#project-overview)
+- [Key Features](#key-innovation-voice-based-intelligent-assistant)
+- [Tech Stack](#tech-stack)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [API Documentation](#api-documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
-This technology bridges the digital divide for rural farmers who may have limited literacy or technical skills, making advanced e-commerce accessible to all.
+ AgriConnect is a comprehensive digital marketplace platform designed to connect farmers directly with buyers, eliminating middlemen and ensuring fair prices for agricultural products.
+ 
+ ## Key Innovation: Voice-Based Intelligent Assistant
+ 
+ ## Project Overview
+ 
+<img src="https://via.placeholder.com/800x400?text=AgriConnect+Dashboard+Preview" alt="Dashboard Preview" width="100%"/>
 
-## Project Overview
+ AgriConnect aims to revolutionize the agricultural supply chain by:
+ - Providing farmers with a direct channel to sell their products
+ - Enabling buyers to source fresh, local produce directly from farmers
+ - Facilitating transparent and efficient ordering and delivery processes
+ - **Empowering users through voice-command technology** to overcome literacy and technical barriers
+ 
+---
 
-AgriConnect aims to revolutionize the agricultural supply chain by:
-- Providing farmers with a direct channel to sell their products
-- Enabling buyers to source fresh, local produce directly from farmers
-- Supporting sustainable and organic farming practices
-- Offering educational resources about organic farming methods
-- Facilitating transparent and efficient ordering and delivery processes
-- **Empowering users through voice-command technology** to overcome literacy and technical barriers
+ ## Features
+ 
+ ### Voice Assistant Capabilities
+ - **Get Product Information**: "Tell me more about the organic farming methods used"
+ 
+---
 
-## Features
+ ### Platform Features
+ 
+ #### For Farmers
+ - Multilingual interface (English, Hindi, Telugu)
+ - Secure authentication and authorization
+ - Responsive design for mobile, tablet and desktop
+- Image upload for produc\ No newline at end of file
+- Image upload for product listings
+- Real-time notifications for orders and messages
+- Analytics dashboard with sales reports
+- Review and rating system
 
-### Voice Assistant Capabilities
+---
 
-#### For Farmers
-- **Add Products**: "I want to sell 50 kg of organic tomatoes for 40 rupees per kg"
-- **Update Products**: "Change the price of my tomatoes to 45 rupees" (work in progress)
-- **Check Orders**: "Show me all my pending orders" or "What orders came in today?"(work in progress)
-- **Get Farming Tips**: "How do I deal with aphids on my tomato plants?"
-- **Weather Forecasts**: "What's the weather forecast for Hyderabad for the next 3 days?"(work in progress)
+## Tech Stack
 
-#### For Buyers- (work in progress)
-- **Search Products**: "Find organic vegetables under 50 rupees per kg"
-- **Place Orders**: "I want to order 10 kg of those tomatoes"
-- **Track Orders**: "What's the status of my order number 12345?"
-- **Get Product Information**: "Tell me more about the organic farming methods used"
+### Frontend
+- **React 18+** - Modern UI library with hooks and functional components
+- **React Router** - Client-side routing
+- **Axios** - HTTP client for API communication
+- **Font Awesome** - Icon library
+- **React Markdown** - Markdown rendering for content
+- **React Syntax Highlighter** - Code syntax highlighting
 
-### Platform Features
+### Backend
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web application framework
+- **SQLite/PostgreSQL** - Database options
+- **Google Cloud Speech-to-Text** - Voice recognition
+- **Multer** - File upload handling
+- **JWT** - Authentication tokens
 
-#### For Farmers
-- Complete product management (add, edit, delete)
-- Order fulfillment workflow
-- Profile management
-- Sales analytics dashboard
+### DevOps & Tools
+- **Git** - Version control
+- **npm/yarn** - Package management
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
 
-#### For Buyers
-- Browse marketplace products
-- View detailed product information
-- Place and track orders
-- Manage profile and preferences
+---
 
-#### For Administrators
-- User management and verification
-- Content moderation
-- System monitoring
-- Analytics dashboard
-
-### General Features
-- Multilingual interface (English, Hindi, Telugu)
-- Secure authentication and authorization
-- Responsive design for mobile, tablet and desktop
-- Image upload for products with cloud storage
-- Transparent pricing and transaction history
-
-## Technical Implementation
-
-### Voice Assistant Architecture
-- **Speech-to-Text**: Powered by AssemblyAI for accurate transcription in multiple languages
-- **Natural Language Processing**: OpenAI GPT models for understanding user intent and context
-- **Function Calling**: Structured actions mapped to platform functionality
-- **Text-to-Speech**: ElevenLabs voices for natural-sounding responses
-
-### Tech Stack
-
-#### Frontend
-- React.js with Redux for state management
-- React Router for navigation
-- Tailwind CSS for responsive design
-- i18next for internationalization
-- OpenAI API integration for intelligent chatbot
-- Web Speech API and third-party voice services
-
-#### Backend
-- Node.js with Express
-- MongoDB for database
-- Mongoose ORM
-- JWT for authentication
-- Multer for file uploads
-- Cloudinary for image storage
-
-## Getting Started
+## Installation
 
 ### Prerequisites
-- Node.js (v14.0.0 or higher)
+- Node.js (v18 or higher)
 - npm or yarn
-- MongoDB instance
-- API keys for OpenAI, AssemblyAI, and ElevenLabs
+- Google Cloud account (for speech features)
+- Git
 
-### Installation
+### Quick Start
 
-1. Clone the repository
-```
-git clone https://github.com/yourusername/agri-connect.git
-cd agri-connect
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/pankajydv07/agri-connect.git
+   cd agri-connect
+   ```
 
-2. Install dependencies for the root, client, and server
-```
-npm install
-cd client && npm install
-cd ../server && npm install
-```
+2. **Install server dependencies**
+   ```bash
+   npm install
+   ```
 
-3. Create .env file in the server directory with the following variables:
-```
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-CLOUDINARY_CLOUD_NAME=your_cloudinary_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-```
+3. **Install client dependencies**
+   ```bash
+   cd client
+   npm install
+   cd ..
+   ```
 
-4. Create .env file in the client directory with the following variables:
-```
-REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_OPENAI_API_KEY=your_openai_api_key
-REACT_APP_ASSEMBLYAI_API_KEY=your_assemblyai_api_key
-REACT_APP_ELEVENLABS_API_KEY=your_elevenlabs_api_key
-```
+4. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-### Running the Application
+5. **Set up Google Cloud credentials**
+   - Download your service account JSON from Google Cloud Console
+   - Place it at `./config/google-cloud-service-account.json`
+   - Update `GOOGLE_APPLICATION_CREDENTIALS` in `.env`
 
-#### Development Mode
-1. Start the server:
-```
-cd server
-npm run dev
-```
+6. **Run database migrations (if applicable)**
+   ```bash
+   npm run migrate
+   ```
 
-2. Start the client (in a new terminal):
-```
-cd client
-npm start
-```
+7. **Start the development server**
+   ```bash
+   # Run both client and server
+   npm run dev
+   
+   # Or run separately
+   npm run server  # Backend only
+   npm run client  # Frontend only
+   ```
 
-#### Production Mode
-1. Build the client:
-```
-cd client
-npm run build
-```
+8. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000
+   - API Documentation: http://localhost:5000/api/docs
 
-2. Start the server:
-```
-cd server
-npm start
-```
+---
 
-## Project Structure
+## Environment Variables
 
-```
-agri-connect/
-├── client/                # Frontend React application
-│   ├── public/            # Static files
-│   └── src/               # React source code
-│       ├── actions/       # Redux actions
-│       ├── components/    # React components
-│       ├── pages/         # Page components
-│       ├── reducers/      # Redux reducers
-│       ├── store/         # Redux store configuration
-│       ├── translations/  # i18n translation files
-│       └── utils/         # Utility functions
-├── server/                # Backend Node.js/Express application
-│   ├── controllers/       # Route controllers
-│   ├── middleware/        # Express middleware
-│   ├── models/            # Mongoose models
-│   ├── routes/            # Express routes
-│   ├── uploads/           # Uploaded files
-│   └── utils/             # Utility functions
-```
+Create a `.env` file in the root directory. See `.env.example` for all available options:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `PORT` | Server port number | Yes |
+| `NODE_ENV` | Environment mode (development/production) | Yes |
+| `DATABASE_URL` | Database connection string | Yes |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account JSON | For voice features |
+| `GOOGLE_CLOUD_PROJECT_ID` | Google Cloud project ID | For voice features |
+| `JWT_SECRET` | Secret key for JWT tokens | Yes |
+| `REACT_APP_API_URL` | Backend URL for React app | Yes |
+| `UPLOAD_PATH` | Directory for file uploads | Yes |
+| `MAX_FILE_SIZE` | Maximum upload size in bytes | Yes |
+> **Note:** All client-side environment variables must start with `REACT_APP_` to be accessible in React.
+
+---
+
+## API Documentation
+
+### Authentication Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | User login |
+| POST | `/api/auth/google` | Google OAuth login |
+| GET | `/api/auth/profile` | Get user profile |
+| PUT | `/api/auth/profile` | Update profile |
+
+### Product Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/products` | List all products |
+| GET | `/api/products/:id` | Get product details |
+| POST | `/api/products` | Create new product (Farmer only) |
+| PUT | `/api/products/:id` | Update product (Farmer only) |
+| DELETE | `/api/products/:id` | Delete product (Farmer only) |
+| GET | `/api/products/search` | Search products |
+
+### Order Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/orders` | Get user orders |
+| POST | `/api/orders` | Place new order |
+| GET | `/api/orders/:id` | Get order details |
+| PUT | `/api/orders/:id/status` | Update order status |
+
+### Voice Assistant Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/voice/process` | Process voice command |
+| POST | `/api/voice/speech-to-text` | Convert speech to text |
+| POST | `/api/voice/text-to-speech` | Convert text to speech |
+| GET | `/api/voice/languages` | Get supported languages |
+
+---
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! Please follow these steps:
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Commit your changes**
+   ```bash
+   git commit -m 'Add amazing feature'
+   ```
+4. **Push to the branch**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. **Open a Pull Request**
+
+### Code Style
+- Follow ESLint configuration
+- Use Prettier for formatting
+- Write meaningful commit messages
+- Add tests for new features
+- Update documentation as needed
+
+---
+
+## Roadmap
+
+- [x] Voice-based product management
+- [x] Multilingual support (English, Hindi, Telugu)
+- [ ] Mobile app (React Native)
+- [ ] AI-powered price recommendations
+- [ ] Blockchain-based supply chain tracking
+- [ ] Integration with government schemes
+- [ ] Weather-based farming alerts
+- [ ] Community forum for farmers
+
+---
+
+## Support
+
+For support, email support@agriconnect.com or join our Slack channel.
+
+**Report Issues:** [GitHub Issues](https://github.com/pankajydv07/agri-connect/issues)
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgements
+---
 
-- Special thanks to the Code4Change initiative for supporting this project
-- All farmers and agricultural experts who provided domain expertise
-- OpenAI for chatbot capabilities
+## Acknowledgments
+
+- Thanks to all the farmers who provided feedback during development
+- Google Cloud for speech recognition APIs
+- Open source community for amazing tools and libraries
+- Contributors who helped improve this project
+
+<p align="center">
+  Made with ❤️ for Farmers
+</p>
