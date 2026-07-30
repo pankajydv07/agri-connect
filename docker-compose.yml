@@ -1,0 +1,57 @@
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# AgriConnect — local / staging compose stack
+#
+# Usage:
+#   cp server/.env.example server/.env   # fill in secrets
+#   docker compose up --build
+#
+# Secrets live in server/.env — never commit that file.
+# ---------------------------------------------------------------------------
+
+services:
+  # --------------------------------------------------------------------------
+  # MongoDB
+  # --------------------------------------------------------------------------
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      # Set credentials only when a fresh volume is initialised.
+      # Leave blank for a no-auth local dev instance (default MONGODB_URI in
+      # .env.example uses no credentials).
+      MONGO_INITDB_DATABASE: agriconnect
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # --------------------------------------------------------------------------
+  # API server (Express + built React client)
+  # --------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # CRA inlines this at image build time. Override with the real domain
+        # when building a production image:
+        #   docker compose build --build-arg REACT_APP_API_URL=https://api.example.com
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:5000}
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+    driver: local

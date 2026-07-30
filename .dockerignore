@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# .dockerignore — keep the build context small and prevent secrets leaking
+# into the image.
+# ---------------------------------------------------------------------------
+
+# Version control
+.git
+.gitignore
+.github
+
+# Environment files — NEVER bake secrets into an image
+.env
+.env.*
+server/.env
+client/.env
+!**/.env.example
+
+# Dev dependencies and caches
+node_modules
+**/node_modules
+client/.cache
+client/node_modules
+server/node_modules
+
+# Test artefacts
+coverage
+**/coverage
+.nyc_output
+
+# Build outputs that the Dockerfile recreates
+client/build
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.swp
+*.swo
+
+# Uploaded and generated files — these belong on a volume or object store
+server/uploads/
+server/google-credentials.json
+server/key.json
+
+# Documentation
+README.md
+SECURITY.md
+CONTRIBUTING.md
+docs/

@@ -1,204 +1,276 @@
 # AgriConnect
 
-AgriConnect is a comprehensive digital marketplace platform designed to connect farmers directly with buyers, eliminating middlemen and ensuring fair prices for agricultural products.
+AgriConnect is a digital marketplace that connects Indian farmers directly with
+buyers, removing the need for middlemen and ensuring fairer prices for both
+parties. The platform includes a voice-enabled multilingual assistant (English,
+Hindi, Telugu) so that farmers with limited literacy or technical experience can
+manage their products and orders using natural speech.
 
-## Key Innovation: Voice-Based Intelligent Assistant
+---
 
-**AgriConnect's voice-based chatbot** is a groundbreaking feature that revolutionizes how farmers interact with technology:
+## What it is
 
-- **Speech-to-Text & Text-to-Speech**: Allows farmers with limited literacy to use voice commands in their native language
-- **Role-Based Intelligence**: Automatically detects whether you're a farmer or buyer and adapts functionality accordingly
-- **Multilingual Support**: Operates in English, Hindi, and Telugu to serve diverse rural communities
-- **Function-Rich Interface**: Performs complex tasks like product management and order tracking through simple voice instructions
+- **Marketplace** — farmers list produce; buyers browse, place, and track orders.
+- **Voice assistant** — speech-to-text and text-to-speech backed by Google Cloud,
+  with OpenAI handling intent parsing. The assistant is role-aware: it behaves
+  differently for a logged-in farmer vs. a buyer.
+- **Crop recommendation** — powered by a fine-tuned LLM hosted on Nebius AI Studio.
+- **Multilingual** — English, Hindi, and Telugu are supported in the assistant
+  and in portions of the UI (see Known Limitations).
 
-This technology bridges the digital divide for rural farmers who may have limited literacy or technical skills, making advanced e-commerce accessible to all.
+---
 
-## Project Overview
+## Architecture
 
-AgriConnect aims to revolutionize the agricultural supply chain by:
-- Providing farmers with a direct channel to sell their products
-- Enabling buyers to source fresh, local produce directly from farmers
-- Supporting sustainable and organic farming practices
-- Offering educational resources about organic farming methods
-- Facilitating transparent and efficient ordering and delivery processes
-- **Empowering users through voice-command technology** to overcome literacy and technical barriers
-
-## Features
-
-### Voice Assistant Capabilities
-
-#### For Farmers
-- **Add Products**: "I want to sell 50 kg of organic tomatoes for 40 rupees per kg"
-- **Update Products**: "Change the price of my tomatoes to 45 rupees" (work in progress)
-- **Check Orders**: "Show me all my pending orders" or "What orders came in today?"(work in progress)
-- **Get Farming Tips**: "How do I deal with aphids on my tomato plants?"
-- **Weather Forecasts**: "What's the weather forecast for Hyderabad for the next 3 days?"(work in progress)
-
-#### For Buyers- (work in progress)
-- **Search Products**: "Find organic vegetables under 50 rupees per kg"
-- **Place Orders**: "I want to order 10 kg of those tomatoes"
-- **Track Orders**: "What's the status of my order number 12345?"
-- **Get Product Information**: "Tell me more about the organic farming methods used"
-
-### Platform Features
-
-#### For Farmers
-- Complete product management (add, edit, delete)
-- Order fulfillment workflow
-- Profile management
-- Sales analytics dashboard
-
-#### For Buyers
-- Browse marketplace products
-- View detailed product information
-- Place and track orders
-- Manage profile and preferences
-
-#### For Administrators
-- User management and verification
-- Content moderation
-- System monitoring
-- Analytics dashboard
-
-### General Features
-- Multilingual interface (English, Hindi, Telugu)
-- Secure authentication and authorization
-- Responsive design for mobile, tablet and desktop
-- Image upload for products with cloud storage
-- Transparent pricing and transaction history
-
-## Technical Implementation
-
-### Voice Assistant Architecture
-- **Speech-to-Text**: Powered by AssemblyAI for accurate transcription in multiple languages
-- **Natural Language Processing**: OpenAI GPT models for understanding user intent and context
-- **Function Calling**: Structured actions mapped to platform functionality
-- **Text-to-Speech**: ElevenLabs voices for natural-sounding responses
-
-### Tech Stack
-
-#### Frontend
-- React.js with Redux for state management
-- React Router for navigation
-- Tailwind CSS for responsive design
-- i18next for internationalization
-- OpenAI API integration for intelligent chatbot
-- Web Speech API and third-party voice services
-
-#### Backend
-- Node.js with Express
-- MongoDB for database
-- Mongoose ORM
-- JWT for authentication
-- Multer for file uploads
-- Cloudinary for image storage
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v14.0.0 or higher)
-- npm or yarn
-- MongoDB instance
-- API keys for OpenAI, AssemblyAI, and ElevenLabs
-
-### Installation
-
-1. Clone the repository
 ```
-git clone https://github.com/yourusername/agri-connect.git
+Browser (React 18 / CRA)
+  └── HTTPS ──► Express 4 API (port 5000)
+                 ├── MongoDB 7  (Mongoose 7)
+                 ├── Cloudinary (product image storage)
+                 ├── Google Cloud Speech / TTS
+                 ├── OpenAI (chat assistant)
+                 └── Nebius AI Studio (crop recommendation)
+```
+
+- **Monorepo**: `client/` is a Create React App project; `server/` is an Express
+  application. They are independent npm workspaces within the same repository.
+- **AI credentials are server-side only.** The browser never sees an API key.
+  The client calls authenticated endpoints (`POST /api/ai/chat`,
+  `POST /api/speech/transcribe`, `POST /api/speak`,
+  `POST /api/crop/recommend`); the server holds every provider secret.
+- **Generated TTS audio** is written to the OS temp directory and served at
+  `/media/audio/...`. It is not stored in the repository or Cloudinary.
+- **Security middleware**: helmet, CORS allowlist, per-route rate limiting,
+  express-mongo-sanitize, zod request validation, centralised error handler.
+
+---
+
+## Prerequisites
+
+| Tool | Version |
+|------|---------|
+| Node.js | 18+ (20 recommended) |
+| npm | 9+ |
+| MongoDB | 7 (or use Docker) |
+| Git | any recent version |
+
+Optional integrations (the server starts without them; affected features return
+503):
+
+| Integration | Purpose |
+|-------------|---------|
+| Cloudinary | Product image upload |
+| OpenAI | In-app AI chat assistant |
+| Google Cloud | Speech-to-text + text-to-speech |
+| Nebius AI Studio | Crop recommendation |
+
+---
+
+## Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-org/agri-connect.git
 cd agri-connect
 ```
 
-2. Install dependencies for the root, client, and server
-```
-npm install
-cd client && npm install
-cd ../server && npm install
+### 2. Install dependencies
+
+```bash
+npm run install:all
 ```
 
-3. Create .env file in the server directory with the following variables:
-```
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-CLOUDINARY_CLOUD_NAME=your_cloudinary_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+This runs `npm install` in both `server/` and `client/`.
+
+### 3. Configure the server environment
+
+```bash
+cp .env.example server/.env
 ```
 
-4. Create .env file in the client directory with the following variables:
+Open `server/.env` and set at minimum:
+
 ```
-REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_OPENAI_API_KEY=your_openai_api_key
-REACT_APP_ASSEMBLYAI_API_KEY=your_assemblyai_api_key
-REACT_APP_ELEVENLABS_API_KEY=your_elevenlabs_api_key
+MONGODB_URI=mongodb://127.0.0.1:27017/agriconnect
+JWT_SECRET=<at-least-32-random-characters>
 ```
 
-### Running the Application
+Every variable is documented in `.env.example`. The server will print a warning
+at startup for each optional integration that is not configured, and will refuse
+to start if a required variable is missing.
 
-#### Development Mode
-1. Start the server:
-```
-cd server
-npm run dev
-```
+**The client does not need its own `.env` file for local development.** If you
+need to point the browser at a non-default API URL:
 
-2. Start the client (in a new terminal):
-```
-cd client
-npm start
+```bash
+# client/.env  (create only if necessary)
+REACT_APP_API_URL=http://localhost:5000
 ```
 
-#### Production Mode
-1. Build the client:
-```
-cd client
-npm run build
+Do not put any provider API keys in `REACT_APP_*` variables. All credentials
+belong in `server/.env` only.
+
+---
+
+## Running in development
+
+```bash
+# Terminal 1: API server with hot-reload (nodemon)
+npm run dev:server
+
+# Terminal 2: CRA dev server
+npm run dev:client
 ```
 
-2. Start the server:
-```
-cd server
-npm start
+The API listens on `http://localhost:5000`.
+The client dev server listens on `http://localhost:3000`.
+
+---
+
+## Running tests
+
+```bash
+# Server tests (Jest + Supertest + mongodb-memory-server)
+npm test --prefix server
+
+# With coverage
+npm run test:coverage --prefix server
 ```
 
-## Project Structure
+No external database is required for the server tests — `mongodb-memory-server`
+spins up an in-process instance automatically.
+
+```bash
+# Client tests (React Testing Library, CRA default runner)
+npm test --prefix client
+```
+
+---
+
+## Running with Docker
+
+Make sure you have Docker and Docker Compose (V2) installed.
+
+```bash
+# 1. Copy and fill in the server env file
+cp .env.example server/.env
+# Edit server/.env — set JWT_SECRET at minimum.
+# MONGODB_URI will be overridden by docker-compose to point at the mongo service
+# unless you set it explicitly to mongodb://mongo:27017/agriconnect.
+
+# 2. Build and start
+docker compose up --build
+
+# 3. The API is available at http://localhost:5000
+```
+
+The compose stack runs two services:
+
+| Service | Image / Build | Notes |
+|---------|---------------|-------|
+| `mongo` | `mongo:7` | Data persisted to a named volume `mongo_data` |
+| `api` | Built from `Dockerfile` | Passes `env_file: ./server/.env` |
+
+To pass a production API URL into the React build:
+
+```bash
+REACT_APP_API_URL=https://api.example.com docker compose build
+```
+
+This is necessary because CRA inlines `REACT_APP_*` variables at compile time,
+not at runtime.
+
+---
+
+## API endpoints
+
+All endpoints that require authentication expect a `Bearer <token>` header.
+Rate limits are enforced globally (300 req / 15 min per IP), with tighter limits
+on auth (10 req / 15 min) and AI routes (30 req / 15 min).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health` | No | Liveness probe: returns DB connection state |
+| POST | `/api/auth/register` | No | Register a new user |
+| POST | `/api/auth/login` | No | Log in; returns a JWT |
+| GET | `/api/auth/me` | Yes | Get the current user's profile |
+| GET | `/api/products` | No | List marketplace products |
+| POST | `/api/products` | Yes (farmer) | Create a product listing |
+| GET | `/api/products/:id` | No | Get a single product |
+| PUT | `/api/products/:id` | Yes (owner) | Update a product |
+| DELETE | `/api/products/:id` | Yes (owner) | Delete a product |
+| GET | `/api/orders` | Yes | List orders for the current user |
+| POST | `/api/orders` | Yes (buyer) | Place an order |
+| PUT | `/api/orders/:id` | Yes | Update order status |
+| GET | `/api/users/:id` | Yes | Get a user's public profile |
+| PUT | `/api/users/:id` | Yes (self) | Update profile |
+| GET | `/api/admin/users` | Yes (admin) | List all users |
+| POST | `/api/ai/chat` | Yes | Send a message to the AI assistant |
+| POST | `/api/speech/transcribe` | Yes | Transcribe an audio file (Google STT) |
+| POST | `/api/speak` | Yes | Synthesise speech from text (Google TTS) |
+| POST | `/api/crop/recommend` | Yes | Get a crop recommendation (Nebius LLM) |
+
+The `/api/speak` path is an alias for `/api/speech` (kept for client
+compatibility).
+
+---
+
+## Project structure
 
 ```
 agri-connect/
-├── client/                # Frontend React application
-│   ├── public/            # Static files
-│   └── src/               # React source code
-│       ├── actions/       # Redux actions
-│       ├── components/    # React components
-│       ├── pages/         # Page components
-│       ├── reducers/      # Redux reducers
-│       ├── store/         # Redux store configuration
-│       ├── translations/  # i18n translation files
-│       └── utils/         # Utility functions
-├── server/                # Backend Node.js/Express application
-│   ├── controllers/       # Route controllers
-│   ├── middleware/        # Express middleware
-│   ├── models/            # Mongoose models
-│   ├── routes/            # Express routes
-│   ├── uploads/           # Uploaded files
-│   └── utils/             # Utility functions
+├── client/                      # React 18 (CRA) front-end
+│   ├── public/
+│   └── src/
+│       ├── actions/             # Redux action creators
+│       ├── components/          # Reusable UI components
+│       ├── pages/               # Route-level page components
+│       ├── reducers/            # Redux reducers
+│       ├── store/               # Redux store configuration
+│       ├── translations/        # i18n JSON files (en, hi, te)
+│       └── utils/               # Helper functions
+│
+├── server/                      # Express 4 API
+│   ├── config/
+│   │   ├── env.js               # Boot-time env validation (authoritative var list)
+│   │   └── logger.js            # Pino logger
+│   ├── controllers/             # Route handler logic
+│   ├── middleware/              # Auth, rate-limit, validation, error handling
+│   ├── models/                  # Mongoose schemas (User, Product, Order)
+│   ├── routes/                  # Express routers
+│   ├── utils/                   # Cloudinary helpers, Google Cloud client setup
+│   ├── app.js                   # Express app (mountable for tests)
+│   └── server.js                # Process entry point (connect, listen, shutdown)
+│
+├── .github/workflows/ci.yml     # GitHub Actions CI
+├── .env.example                 # Documented env surface (safe to commit)
+├── Dockerfile                   # Multi-stage build (client + server)
+├── docker-compose.yml           # Local / staging stack
+├── SECURITY.md                  # Credential rotation runbook
+└── CONTRIBUTING.md              # Contributor guide
 ```
 
-## Contributing
+---
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Known limitations
+
+- **Pest Detection** — the pest-detection feature in the UI returns sample /
+  placeholder data. It is not connected to a real model and should not be used
+  for agricultural decisions.
+- **Maintenance Logs** — the maintenance log feature displays demo data only.
+  Persistence is not implemented.
+- **i18n coverage is partial** — the voice assistant and several core pages are
+  available in English, Hindi, and Telugu. A number of secondary pages have not
+  yet been translated and will fall back to English.
+- **Buyer voice commands** — buyer-side voice commands (search products, place
+  orders, track orders) are marked as works in progress. The UI accepts voice
+  input but not all actions are fully wired up.
+- **Weather in the assistant** — weather-forecast voice queries are not yet
+  implemented end-to-end.
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgements
-
-- Special thanks to the Code4Change initiative for supporting this project
-- All farmers and agricultural experts who provided domain expertise
-- OpenAI for chatbot capabilities
+MIT. See `package.json`.
