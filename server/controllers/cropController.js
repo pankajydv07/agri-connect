@@ -1,36 +1,56 @@
-const axios = require('axios');
-const env = require('../config/env');
-const { AppError, asyncHandler } = require('../middleware/errorHandler');
-const logger = require('../config/logger');
+/**
+ * AI crop recommendation.
+ *
+ * Previously this called Nebius with a bearer token written as a string literal
+ * in this file — valid until 2030 and committed to a public repository. It now
+ * goes through the shared Groq client.
+ *
+ * Note on quality: the Nebius model was a LoRA fine-tuned specifically for crop
+ * recommendation. Groq serves general-purpose models only, so the prompt below
+ * does more work to compensate — it pins the structure, demands local specifics,
+ * and forbids the vague filler a general model tends to produce on this task.
+ */
 
-const SYSTEM_PROMPT =
-  'You are an expert agricultural advisor with deep knowledge of crop selection, farming ' +
-  "practices, and local agricultural conditions. Provide detailed, practical recommendations " +
-  "tailored to the farmer's specific situation.";
+const { chatCompletion, firstMessage } = require('../utils/groq');
+const { AppError, asyncHandler } = require('../middleware/errorHandler');
+
+const SYSTEM_PROMPT = `You are an experienced agricultural advisor working with smallholder farmers in India.
+
+Give practical, specific, actionable recommendations. Follow these rules:
+- Recommend crops that are genuinely suited to the stated soil, season and region. Do not suggest a crop that cannot grow there.
+- Give real numbers wherever you can: expected yield per acre, seed rate, irrigation frequency, fertiliser quantities.
+- Use Indian units and terms the farmer will recognise (acre, quintal, kharif/rabi/zaid) and quote money in rupees.
+- Where a recommendation depends on something you were not told, say what to check rather than assuming.
+- Be honest about risk. If a crop is profitable but water-hungry in a low-rainfall district, say so.
+- Do not pad the answer with generic advice that applies to every farm.`;
 
 const buildPrompt = (input) => {
   const lines = [
-    'Provide a detailed crop recommendation for a farm with the following characteristics:',
+    'Recommend crops for a farm with these characteristics:',
     `- Location: ${input.location}`,
     `- Season: ${input.season}`,
-    `- Soil Type: ${input.soil}`,
+    `- Soil type: ${input.soil}`,
   ];
 
-  if (input.previousCrops) lines.push(`- Previous Crops: ${input.previousCrops}`);
+  if (input.previousCrops) lines.push(`- Previous crops: ${input.previousCrops}`);
   if (input.irrigationAvailable) lines.push(`- Irrigation: ${input.irrigationAvailable}`);
-  if (input.landSize) lines.push(`- Land Size: ${input.landSize} acres`);
+  if (input.landSize) lines.push(`- Land size: ${input.landSize} acres`);
   if (input.soilPh) lines.push(`- Soil pH: ${input.soilPh}`);
-  if (input.farmingExperience) lines.push(`- Farmer Experience Level: ${input.farmingExperience}`);
+  if (input.farmingExperience) lines.push(`- Farmer experience: ${input.farmingExperience}`);
 
   lines.push(
     '',
-    'Please provide:',
-    '1. Top 3 recommended crops with reasons',
-    '2. Expected yield per acre',
-    '3. Required irrigation and fertilizer needs',
-    '4. Potential challenges and mitigation strategies',
-    '5. Crop rotation suggestions based on previous crops (if provided)',
-    "6. Additional tips based on the farmer's experience level"
+    'Structure the answer with these markdown headings:',
+    '## Top 3 Recommended Crops',
+    'For each: why it suits this soil/season/region, expected yield per acre, and expected price range.',
+    '## Irrigation and Fertiliser',
+    '## Risks and How to Manage Them',
+    '## Crop Rotation Advice',
+    input.previousCrops
+      ? 'Base this on the previous crops listed above.'
+      : 'Suggest a rotation plan for the next two seasons.',
+    '## What to Verify Locally',
+    'List anything the farmer should confirm with their local extension officer or soil test.'
   );
 
   return lines.join('\n');
@@ -40,62 +60,25 @@ const buildPrompt = (input) => {
 // @route   POST /api/crop/recommend
 // @access  Private
 const getCropRecommendation = asyncHandler(async (req, res) => {
-  // The bearer token used to be a hardcoded string literal in this file, valid
-  // until 2030, committed to a public repository.
-  if (!env.nebius.configured) {
-    throw new AppError('Crop recommendation is not configured on this server', 503);
-  }
+  const completion = await chatCompletion({
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: buildPrompt(req.body) },
+    ],
+    // Deterministic: two farmers with identical inputs should get the same advice.
+    temperature: 0,
+    maxTokens: 2000,
+    feature: 'crop-recommendation',
+  });
 
-  const prompt = buildPrompt(req.body);
-
-  let response;
-  try {
-    response = await axios.post(
-      `${env.nebius.baseUrl}/chat/completions`,
-      {
-        model: env.nebius.model,
-        temperature: 0,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${env.nebius.apiKey}`,
-        },
-        timeout: 30000,
-      }
-    );
-  } catch (error) {
-    // Log the provider's response for us; return something actionable to the user.
-    logger.error(
-      { err: error, status: error.response?.status, body: error.response?.data },
-      'Nebius crop recommendation request failed'
-    );
-
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-      throw new AppError('The recommendation service timed out — please try again', 504);
-    }
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      throw new AppError('Crop recommendation service rejected our credentials', 502);
-    }
-    if (error.response?.status === 429) {
-      throw new AppError('Recommendation service is rate limited — please try again shortly', 429);
-    }
-    throw new AppError('Failed to fetch a crop recommendation — please try again later', 502);
-  }
-
-  const recommendation = response.data?.choices?.[0]?.message?.content;
+  const recommendation = firstMessage(completion).message?.content;
 
   if (!recommendation) {
-    logger.error({ body: response.data }, 'Unexpected Nebius response shape');
-    throw new AppError('Received an invalid response from the recommendation service', 502);
+    throw new AppError('The recommendation service returned an empty response', 502);
   }
 
-  // `recommendation` is kept for backwards compatibility with the existing
-  // client; `data` matches the response envelope used everywhere else.
+  // `recommendation` at the top level is kept for backwards compatibility with
+  // the existing client; `data` matches the envelope used everywhere else.
   res.status(200).json({ success: true, data: { recommendation }, recommendation });
 });
 

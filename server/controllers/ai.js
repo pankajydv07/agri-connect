@@ -6,24 +6,13 @@
  * OpenAI SDK into the client. The model provider is now reached only from here,
  * so the credential never leaves the server and every call is attributable to
  * an authenticated user and rate limited.
+ *
+ * Provider is Groq, shared with crop recommendation and pest detection through
+ * `utils/groq.js`.
  */
 
-const OpenAI = require('openai');
-const env = require('../config/env');
-const { AppError, asyncHandler } = require('../middleware/errorHandler');
-const logger = require('../config/logger');
-
-let client;
-
-const getClient = () => {
-  if (!env.openai.configured) {
-    throw new AppError('The AI assistant is not configured on this server', 503);
-  }
-  if (!client) {
-    client = new OpenAI({ apiKey: env.openai.apiKey });
-  }
-  return client;
-};
+const { chatCompletion, firstMessage } = require('../utils/groq');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 const LANGUAGE_NAMES = {
   'en-US': 'English',
@@ -45,9 +34,10 @@ const buildSystemPrompt = (user, language) => {
   const roleGuidance =
     user.role === 'farmer'
       ? 'This user is a FARMER. Help them list produce, manage their listings, review incoming ' +
-        'orders, and answer practical growing questions.'
-      : 'This user is a BUYER. Help them find produce, understand listings, place orders, and ' +
-        'track order status. Do not offer to create or edit produce listings.';
+        'orders, check the weather for their fields, and answer practical growing questions. ' +
+        'They cannot place orders.'
+      : 'This user is a BUYER. Help them search produce, understand listings, place orders, and ' +
+        'track order status. Do not offer to create or edit produce listings — they cannot.';
 
   return [
     'You are the AgriConnect assistant, helping connect Indian farmers directly with buyers.',
@@ -55,8 +45,13 @@ const buildSystemPrompt = (user, language) => {
     `The user's name is ${user.name} and they are located in ${user.location}.`,
     `Reply in ${languageName}, in plain language suitable for someone with limited literacy.`,
     'Keep answers short and concrete. Prices are in Indian Rupees (₹).',
-    'Never invent order numbers, prices, or availability — if you need data, call the ' +
-      'appropriate tool. If a tool is unavailable, say so plainly rather than guessing.',
+    // The anti-hallucination clause matters most for the tool-backed answers:
+    // an invented order number or forecast is worse than an admission of doubt.
+    'Never invent order numbers, prices, availability, or weather figures. If you need data, call ' +
+      'the appropriate tool and use only what it returns. If a tool is unavailable or returns an ' +
+      'error, say so plainly rather than guessing.',
+    'When a tool needs a value you do not have — a product id, a delivery address, a location — ' +
+      'ask the user for it instead of inventing one.',
   ].join(' ');
 };
 
@@ -66,8 +61,6 @@ const buildSystemPrompt = (user, language) => {
 exports.chat = asyncHandler(async (req, res) => {
   const { messages, tools, language } = req.body;
 
-  const openai = getClient();
-
   // Strip any client-supplied system message and prepend our own, so the
   // browser cannot rewrite the assistant's instructions or role.
   const conversation = [
@@ -75,32 +68,15 @@ exports.chat = asyncHandler(async (req, res) => {
     ...messages.filter((message) => message.role !== 'system'),
   ];
 
-  let completion;
-  try {
-    completion = await openai.chat.completions.create({
-      model: env.openai.model,
-      messages: conversation,
-      ...(tools && tools.length > 0 ? { tools, tool_choice: 'auto' } : {}),
-      temperature: 0.3,
-      max_tokens: 800,
-    });
-  } catch (error) {
-    logger.error({ err: error, status: error.status }, 'AI chat completion failed');
+  const completion = await chatCompletion({
+    messages: conversation,
+    tools,
+    temperature: 0.3,
+    maxTokens: 800,
+    feature: 'assistant-chat',
+  });
 
-    if (error.status === 429) {
-      throw new AppError('The assistant is busy right now — please try again shortly', 429);
-    }
-    if (error.status === 401 || error.status === 403) {
-      throw new AppError('The assistant rejected our credentials', 502);
-    }
-    throw new AppError('The assistant is unavailable — please try again later', 502);
-  }
-
-  const choice = completion.choices?.[0];
-
-  if (!choice) {
-    throw new AppError('The assistant returned an empty response', 502);
-  }
+  const choice = firstMessage(completion);
 
   res.status(200).json({
     success: true,

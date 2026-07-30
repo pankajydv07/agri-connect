@@ -43,4 +43,17 @@ const audioUpload = multer({
   limits: { fileSize: env.MAX_AUDIO_UPLOAD_BYTES, files: 1 },
 });
 
-module.exports = { productImageUpload, audioUpload };
+/**
+ * Images sent for AI analysis (pest detection).
+ *
+ * Memory storage, not Cloudinary: a diagnostic photo is transient input, not an
+ * asset we want to store and pay for. It is base64-encoded straight into the
+ * vision request and then discarded.
+ */
+const imageAnalysisUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: imageFilter,
+  limits: { fileSize: env.MAX_UPLOAD_BYTES, files: 1 },
+});
+
+module.exports = { productImageUpload, audioUpload, imageAnalysisUpload };

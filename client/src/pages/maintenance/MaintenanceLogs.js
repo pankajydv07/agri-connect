@@ -1,15 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import DemoBanner from '../../components/ui/DemoBanner';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { SpinnerBlock } from '../../components/ui/Spinner';
+import EmptyState, { ErrorState } from '../../components/ui/EmptyState';
+import FormField, { FormErrorSummary, SubmitButton } from '../../components/ui/FormField';
+import api from '../../utils/api';
 
-// TODO: replace localStorage persistence with a real backend resource.
-// Suggested endpoints:
-//   GET    /api/maintenance-logs          — list all logs for the current user/org
-//   POST   /api/maintenance-logs          — create a new log entry
-//   PATCH  /api/maintenance-logs/:id      — update status
-//   DELETE /api/maintenance-logs/:id      — remove a log
-// Until this is wired up, every entry disappears when localStorage is cleared
-// or the user switches browsers/devices.
+// ─── constants ────────────────────────────────────────────────────────────────
 
 const statusOptions = ['Scheduled', 'In Progress', 'Completed', 'Delayed', 'On Hold'];
 const priorityOptions = ['Low', 'Medium', 'High', 'Critical'];
@@ -27,292 +22,274 @@ const initialFormState = {
   notes: ''
 };
 
-const parseDate = (value) => {
-  if (!value) return null;
-  const parsed = new Date(`${value}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Convert an ISO date string or anything the server returns into a YYYY-MM-DD
+ * string suitable for a date input, or '' if empty/invalid.
+ */
+const toInputDate = (value) => {
+  if (!value) return '';
+  // If it looks like YYYY-MM-DD already, keep it
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
-const createSampleLogs = () => {
-  const getDateString = (offset) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + offset);
-    return date.toISOString().split('T')[0];
-  };
-
-  return [
-    {
-      id: uuidv4(),
-      machine: 'Hydraulic Press #2',
-      location: 'Fabrication Bay',
-      task: 'Replace hydraulic oil and inspect seals',
-      technician: 'Priya Singh',
-      scheduledDate: getDateString(2),
-      nextServiceDate: getDateString(92),
-      status: 'Scheduled',
-      priority: 'High',
-      downtimeHours: '2',
-      notes: 'Ensure food-grade oil is used as per OEM specs.'
-    },
-    {
-      id: uuidv4(),
-      machine: 'Conveyor Line A',
-      location: 'Assembly Unit',
-      task: 'Check belt tension and calibrate sensors',
-      technician: 'Rahul Mehta',
-      scheduledDate: getDateString(-1),
-      nextServiceDate: getDateString(29),
-      status: 'In Progress',
-      priority: 'Medium',
-      downtimeHours: '1.5',
-      notes: 'Sensor #4 triggering false alarms; carry spare module.'
-    },
-    {
-      id: uuidv4(),
-      machine: 'Cooling Tower',
-      location: 'Utilities',
-      task: 'Clean filters and verify water treatment levels',
-      technician: 'Anita George',
-      scheduledDate: getDateString(-5),
-      nextServiceDate: getDateString(25),
-      status: 'Completed',
-      priority: 'High',
-      downtimeHours: '3',
-      notes: 'Added anti-corrosion additive; monitor conductivity daily.',
-      completedDate: getDateString(-5)
-    }
-  ];
+const formatDateDisplay = (value) => {
+  const input = toInputDate(value);
+  if (!input) return '—';
+  const [yyyy, mm, dd] = input.split('-');
+  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const getStatusClasses = (status) => {
   switch (status) {
-    case 'Completed':
-      return 'bg-green-100 text-green-700 border border-green-200';
-    case 'In Progress':
-      return 'bg-amber-100 text-amber-700 border border-amber-200';
-    case 'Delayed':
-      return 'bg-red-100 text-red-600 border border-red-200';
-    case 'On Hold':
-      return 'bg-slate-100 text-slate-600 border border-slate-200';
-    default:
-      return 'bg-blue-100 text-blue-600 border border-blue-200';
+    case 'Completed': return 'bg-green-100 text-green-700 border border-green-200';
+    case 'In Progress': return 'bg-amber-100 text-amber-700 border border-amber-200';
+    case 'Delayed': return 'bg-red-100 text-red-600 border border-red-200';
+    case 'On Hold': return 'bg-slate-100 text-slate-600 border border-slate-200';
+    default: return 'bg-blue-100 text-blue-600 border border-blue-200';
   }
 };
 
 const getPriorityClasses = (priority) => {
   switch (priority) {
-    case 'Critical':
-      return 'bg-red-100 text-red-600 border border-red-200';
-    case 'High':
-      return 'bg-orange-100 text-orange-600 border border-orange-200';
-    case 'Low':
-      return 'bg-emerald-100 text-emerald-600 border border-emerald-200';
-    default:
-      return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+    case 'Critical': return 'bg-red-100 text-red-600 border border-red-200';
+    case 'High': return 'bg-orange-100 text-orange-600 border border-orange-200';
+    case 'Low': return 'bg-emerald-100 text-emerald-600 border border-emerald-200';
+    default: return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
   }
 };
 
-const MaintenanceLogs = () => {
-  const [logs, setLogs] = useState(() => {
-    if (typeof window === 'undefined') {
-      return createSampleLogs();
+/** Extract per-field errors from a 400 response */
+const parseFieldErrors = (responseData) => {
+  const fieldErrors = {};
+  if (Array.isArray(responseData?.details)) {
+    for (const { field, message } of responseData.details) {
+      if (field) fieldErrors[field] = message;
     }
-    try {
-      const stored = window.localStorage.getItem('maintenanceLogs');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.error('Unable to read maintenance logs from storage', error);
-    }
-    return createSampleLogs();
-  });
+  }
+  return fieldErrors;
+};
 
-  const [formData, setFormData] = useState(initialFormState);
+// ─── component ────────────────────────────────────────────────────────────────
+
+const MaintenanceLogs = () => {
+  // ── list state ──
+  const [logs, setLogs] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [summary, setSummary] = useState({});
+  const [isFetching, setIsFetching] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+
+  // ── filter/sort state ──
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [error, setError] = useState('');
+
+  // ── form state ──
+  const [formData, setFormData] = useState(initialFormState);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formSummaryError, setFormSummaryError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── flash messages ──
   const [success, setSuccess] = useState('');
+  const [flashError, setFlashError] = useState('');
+
+  // ── per-row in-flight status update ──
+  const [updatingStatus, setUpdatingStatus] = useState({}); // id → true
+  const [deletingId, setDeletingId] = useState(null);
+  const [clearingAll, setClearingAll] = useState(false);
+
+  // ── debounce ref for search ──
+  const searchTimer = useRef(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const fetchLogs = useCallback(async () => {
+    setIsFetching(true);
+    setFetchError(null);
+    try {
+      const params = { sort: sortDirection };
+      if (statusFilter !== 'All') params.status = statusFilter;
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+
+      const { data } = await api.get('/api/maintenance-logs', { params });
+      setLogs(data.data || []);
+      setPagination(data.pagination || null);
+      setSummary(data.summary || {});
+    } catch (err) {
+      setFetchError(err?.response?.data?.message || 'Could not load maintenance logs.');
+    } finally {
+      setIsFetching(false);
+    }
+  }, [statusFilter, debouncedSearch, sortDirection]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('maintenanceLogs', JSON.stringify(logs));
-    }
-  }, [logs]);
+    fetchLogs();
+  }, [fetchLogs]);
 
+  // Debounce search input
+  useEffect(() => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(searchTimer.current);
+  }, [searchTerm]);
+
+  // Auto-dismiss flash messages
   useEffect(() => {
     if (!success) return undefined;
-    const timeout = window.setTimeout(() => setSuccess(''), 3000);
-    return () => window.clearTimeout(timeout);
+    const t = setTimeout(() => setSuccess(''), 3000);
+    return () => clearTimeout(t);
   }, [success]);
 
   useEffect(() => {
-    if (!error) return undefined;
-    const timeout = window.setTimeout(() => setError(''), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [error]);
+    if (!flashError) return undefined;
+    const t = setTimeout(() => setFlashError(''), 4500);
+    return () => clearTimeout(t);
+  }, [flashError]);
+
+  // ── form ──────────────────────────────────────────────────────────────────
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear the field-level error as the user types
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setFieldErrors({});
+    setFormSummaryError('');
+
     const trimmedMachine = formData.machine.trim();
     const trimmedTask = formData.task.trim();
 
+    // Client-side guard
     if (!trimmedMachine || !trimmedTask || !formData.scheduledDate) {
-      setError('Please provide at least the equipment name, task, and scheduled date.');
+      setFormSummaryError('Please provide at least the equipment name, task, and scheduled date.');
       return;
     }
 
-    const newLog = {
-      ...formData,
-      id: uuidv4(),
-      machine: trimmedMachine,
-      task: trimmedTask,
-      technician: formData.technician.trim(),
-      location: formData.location.trim(),
-      notes: formData.notes.trim()
-    };
+    setIsSubmitting(true);
+    try {
+      const body = {
+        machine: trimmedMachine,
+        location: formData.location.trim(),
+        task: trimmedTask,
+        technician: formData.technician.trim(),
+        scheduledDate: formData.scheduledDate,
+        status: formData.status,
+        priority: formData.priority
+      };
+      if (formData.nextServiceDate) body.nextServiceDate = formData.nextServiceDate;
+      if (formData.downtimeHours !== '') body.downtimeHours = Number(formData.downtimeHours);
+      if (formData.notes.trim()) body.notes = formData.notes.trim();
 
-    setLogs((prev) => [newLog, ...prev]);
-    setFormData(initialFormState);
-    setSuccess('Maintenance task logged successfully.');
-  };
-
-  const handleStatusChange = (id, newStatus) => {
-    setLogs((prev) =>
-      prev.map((log) => {
-        if (log.id !== id) return log;
-        const completedDate =
-          newStatus === 'Completed'
-            ? log.completedDate || new Date().toISOString().split('T')[0]
-            : log.completedDate;
-        return {
-          ...log,
-          status: newStatus,
-          completedDate
-        };
-      })
-    );
-  };
-
-  const handleDelete = (id) => {
-    setLogs((prev) => prev.filter((log) => log.id !== id));
-  };
-
-  const handleClearLogs = () => {
-    const confirmClear =
-      typeof window === 'undefined' ? true : window.confirm('This will remove all saved maintenance records. Continue?');
-    if (!confirmClear) return;
-    setLogs([]);
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem('maintenanceLogs');
+      await api.post('/api/maintenance-logs', body);
+      setFormData(initialFormState);
+      setSuccess('Maintenance task logged successfully.');
+      fetchLogs();
+    } catch (err) {
+      const status = err?.response?.status;
+      const responseData = err?.response?.data;
+      if (status === 400) {
+        const fe = parseFieldErrors(responseData);
+        setFieldErrors(fe);
+        setFormSummaryError(responseData?.message || 'Please fix the errors below and try again.');
+      } else {
+        setFormSummaryError(responseData?.message || 'Could not save the task. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const filteredLogs = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    return logs.filter((log) => {
-      const matchesStatus = statusFilter === 'All' || log.status === statusFilter;
-      const matchesSearch =
-        !term ||
-        [log.machine, log.task, log.technician, log.location]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(term));
-      return matchesStatus && matchesSearch;
-    });
-  }, [logs, searchTerm, statusFilter]);
+  // ── status update ──────────────────────────────────────────────────────────
 
-  const sortedLogs = useMemo(() => {
-    const logsToSort = [...filteredLogs];
-    return logsToSort.sort((a, b) => {
-      const aDate = parseDate(a.scheduledDate) || new Date(0);
-      const bDate = parseDate(b.scheduledDate) || new Date(0);
-      return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
-    });
-  }, [filteredLogs, sortDirection]);
-
-  const today = useMemo(() => {
-    const base = new Date();
-    base.setHours(0, 0, 0, 0);
-    return base;
-  }, []);
-
-  const stats = useMemo(() => {
-    const openTasks = logs.filter((log) => log.status !== 'Completed').length;
-    const completed = logs.filter((log) => log.status === 'Completed').length;
-    const overdue = logs.filter((log) => {
-      const date = parseDate(log.scheduledDate);
-      return log.status !== 'Completed' && date && date < today;
-    }).length;
-    const weekAhead = new Date(today);
-    weekAhead.setDate(today.getDate() + 7);
-    const dueSoon = logs.filter((log) => {
-      const date = parseDate(log.scheduledDate);
-      return log.status !== 'Completed' && date && date >= today && date <= weekAhead;
-    }).length;
-
-    return {
-      openTasks,
-      completed,
-      overdue,
-      dueSoon,
-      completionRate: logs.length ? Math.round((completed / logs.length) * 100) : 0,
-      criticalAlerts: logs.filter((log) => log.priority === 'Critical' && log.status !== 'Completed').length
-    };
-  }, [logs, today]);
-
-  const upcomingTasks = useMemo(() => {
-    return logs
-      .filter((log) => {
-        const date = parseDate(log.scheduledDate);
-        return log.status !== 'Completed' && date && date >= today;
-      })
-      .sort((a, b) => {
-        const aDate = parseDate(a.scheduledDate) || new Date();
-        const bDate = parseDate(b.scheduledDate) || new Date();
-        return aDate - bDate;
-      })
-      .slice(0, 5);
-  }, [logs, today]);
-
-  const formatDate = (value) => {
-    const date = parseDate(value);
-    if (!date) return '—';
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  const handleStatusChange = async (id, newStatus) => {
+    setUpdatingStatus((prev) => ({ ...prev, [id]: true }));
+    try {
+      const { data } = await api.patch(`/api/maintenance-logs/${id}`, { status: newStatus });
+      setLogs((prev) => prev.map((log) => (log.id === id ? data.data : log)));
+    } catch (err) {
+      setFlashError(err?.response?.data?.message || 'Could not update status. Please try again.');
+    } finally {
+      setUpdatingStatus((prev) => { const next = { ...prev }; delete next[id]; return next; });
+    }
   };
+
+  // ── delete one ────────────────────────────────────────────────────────────
+
+  const handleDelete = async (id, machineName) => {
+    if (!window.confirm(`Remove the maintenance record for "${machineName}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/api/maintenance-logs/${id}`);
+      setLogs((prev) => prev.filter((log) => log.id !== id));
+      setSuccess('Record removed.');
+      // Refresh to get accurate summary counts
+      fetchLogs();
+    } catch (err) {
+      setFlashError(err?.response?.data?.message || 'Could not remove the record. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // ── clear all ─────────────────────────────────────────────────────────────
+
+  const handleClearLogs = async () => {
+    const count = pagination?.total ?? logs.length;
+    const confirmed = window.confirm(
+      `This will permanently delete all ${count} maintenance record${count !== 1 ? 's' : ''} for your account. This cannot be undone. Continue?`
+    );
+    if (!confirmed) return;
+    setClearingAll(true);
+    try {
+      await api.delete('/api/maintenance-logs');
+      setLogs([]);
+      setSummary({});
+      setPagination(null);
+      setSuccess('All maintenance records cleared.');
+    } catch (err) {
+      setFlashError(err?.response?.data?.message || 'Could not clear records. Please try again.');
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Derive stats from server summary + logs for the tile section
+  const openTasks = (summary['Scheduled'] || 0) + (summary['In Progress'] || 0) + (summary['Delayed'] || 0) + (summary['On Hold'] || 0);
+  const completed = summary['Completed'] || 0;
+  const total = pagination?.total ?? logs.length;
+  const completionRate = total ? Math.round((completed / total) * 100) : 0;
+  const overdue = logs.filter((log) => log.isOverdue).length;
+  const criticalAlerts = logs.filter((log) => log.priority === 'Critical' && log.status !== 'Completed').length;
+
+  // Upcoming: non-completed with future scheduledDate, sorted, capped at 5
+  const upcomingTasks = logs
+    .filter((log) => log.status !== 'Completed' && !log.isOverdue)
+    .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))
+    .slice(0, 5);
+
+  // ── render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-8">
-      {/* Non-dismissible demo banner — data lives only in localStorage, not a
-          real backend. Remove this banner once a real API is wired up. */}
-      <DemoBanner
-        tone="warning"
-        tag="Demo — local data only"
-        title="Maintenance records are not saved to a server"
-        points={[
-          'All entries are stored in this browser\'s localStorage only.',
-          'Records will be lost if you clear your browser data, use a different device, or use a different browser.',
-          'There is no shared view — other users cannot see the entries you add here.',
-          'A real backend API must be connected before this feature is production-ready.'
-        ]}
-      />
-
       <div className="bg-white shadow rounded-xl border border-gray-100 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -326,13 +303,14 @@ const MaintenanceLogs = () => {
             <button
               type="button"
               onClick={handleClearLogs}
-              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
+              disabled={clearingAll || logs.length === 0}
+              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Clear Logbook
+              {clearingAll ? 'Clearing…' : 'Clear Logbook'}
             </button>
             <button
               type="button"
-              onClick={() => setFormData(initialFormState)}
+              onClick={() => { setFormData(initialFormState); setFieldErrors({}); setFormSummaryError(''); }}
               className="inline-flex items-center justify-center rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
             >
               Reset Form
@@ -340,195 +318,193 @@ const MaintenanceLogs = () => {
           </div>
         </div>
 
+        {/* Stats tiles — counts from server summary */}
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-green-50 to-white p-4">
             <div className="text-sm font-medium text-gray-500">Open Tasks</div>
-            <div className="mt-2 text-3xl font-semibold text-gray-900">{stats.openTasks}</div>
-            <p className="mt-1 text-xs text-gray-500">{stats.criticalAlerts} critical alert(s)</p>
-          </div>
-          <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-blue-50 to-white p-4">
-            <div className="text-sm font-medium text-gray-500">Due This Week</div>
-            <div className="mt-2 text-3xl font-semibold text-gray-900">{stats.dueSoon}</div>
-            <p className="mt-1 text-xs text-gray-500">Plan manpower accordingly</p>
+            <div className="mt-2 text-3xl font-semibold text-gray-900">{openTasks}</div>
+            <p className="mt-1 text-xs text-gray-500">{criticalAlerts} critical alert(s)</p>
           </div>
           <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-amber-50 to-white p-4">
             <div className="text-sm font-medium text-gray-500">Overdue</div>
-            <div className="mt-2 text-3xl font-semibold text-gray-900">{stats.overdue}</div>
+            <div className="mt-2 text-3xl font-semibold text-gray-900">{overdue}</div>
             <p className="mt-1 text-xs text-gray-500">Escalate overdue jobs promptly</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-blue-50 to-white p-4">
+            <div className="text-sm font-medium text-gray-500">Completed</div>
+            <div className="mt-2 text-3xl font-semibold text-gray-900">{completed}</div>
+            <p className="mt-1 text-xs text-gray-500">Total closed jobs</p>
           </div>
           <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-purple-50 to-white p-4">
             <div className="text-sm font-medium text-gray-500">Completion Rate</div>
-            <div className="mt-2 text-3xl font-semibold text-gray-900">{stats.completionRate}%</div>
-            <p className="mt-1 text-xs text-gray-500">{stats.completed} job(s) closed</p>
+            <div className="mt-2 text-3xl font-semibold text-gray-900">{completionRate}%</div>
+            <p className="mt-1 text-xs text-gray-500">{total} total log(s)</p>
           </div>
         </div>
       </div>
 
+      {/* Flash messages */}
+      {(success || flashError) && (
+        <div
+          role="alert"
+          className={`rounded-lg border px-4 py-3 text-sm font-medium ${
+            flashError
+              ? 'border-red-200 bg-red-50 text-red-600'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-600'
+          }`}
+        >
+          {flashError || success}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
+
+          {/* ── Log a task form ── */}
           <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-gray-900">Log a Maintenance Task</h2>
             <p className="mt-1 text-sm text-gray-600">Capture the essentials for scheduling, traceability, and compliance.</p>
-            {(error || success) && (
-              <div
-                role="alert"
-                className={`mt-4 rounded-lg border px-4 py-3 text-sm font-medium ${
-                  error
-                    ? 'border-red-200 bg-red-50 text-red-600'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-600'
-                }`}
-              >
-                {error || success}
-              </div>
-            )}
+
+            <FormErrorSummary message={formSummaryError} className="mt-4" />
+
             <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-machine">
-                  Equipment / Asset
-                  <input
-                    id="log-machine"
-                    type="text"
-                    name="machine"
-                    value={formData.machine}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                    placeholder="e.g. Boiler #1"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-location">
-                  Location / Line
-                  <input
-                    id="log-location"
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                    placeholder="e.g. Utilities Block"
-                  />
-                </label>
-              </div>
-              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-task">
-                Task Description
-                <input
-                  id="log-task"
-                  type="text"
-                  name="task"
-                  value={formData.task}
+                <FormField
+                  id="log-machine"
+                  name="machine"
+                  label="Equipment / Asset"
+                  required
+                  value={formData.machine}
                   onChange={handleInputChange}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                  placeholder="e.g. Inspect bearings and lubricate"
+                  error={fieldErrors.machine}
+                  placeholder="e.g. Boiler #1"
+                  disabled={isSubmitting}
+                  className="mb-0"
                 />
-              </label>
+                <FormField
+                  id="log-location"
+                  name="location"
+                  label="Location / Line"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  error={fieldErrors.location}
+                  placeholder="e.g. Utilities Block"
+                  disabled={isSubmitting}
+                  className="mb-0"
+                />
+              </div>
+              <FormField
+                id="log-task"
+                name="task"
+                label="Task Description"
+                required
+                value={formData.task}
+                onChange={handleInputChange}
+                error={fieldErrors.task}
+                placeholder="e.g. Inspect bearings and lubricate"
+                disabled={isSubmitting}
+                className="mb-0"
+              />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-technician">
-                  Technician / Team
-                  <input
-                    id="log-technician"
-                    type="text"
-                    name="technician"
-                    value={formData.technician}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                    placeholder="e.g. Mechanical Crew"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-scheduledDate">
-                  Scheduled Date
-                  <input
-                    id="log-scheduledDate"
-                    type="date"
-                    name="scheduledDate"
-                    value={formData.scheduledDate}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                  />
-                </label>
+                <FormField
+                  id="log-technician"
+                  name="technician"
+                  label="Technician / Team"
+                  value={formData.technician}
+                  onChange={handleInputChange}
+                  error={fieldErrors.technician}
+                  placeholder="e.g. Mechanical Crew"
+                  disabled={isSubmitting}
+                  className="mb-0"
+                />
+                <FormField
+                  id="log-scheduledDate"
+                  name="scheduledDate"
+                  label="Scheduled Date"
+                  required
+                  type="date"
+                  value={formData.scheduledDate}
+                  onChange={handleInputChange}
+                  error={fieldErrors.scheduledDate}
+                  disabled={isSubmitting}
+                  className="mb-0"
+                />
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-status">
-                  Status
-                  <select
-                    id="log-status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                  >
-                    {statusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-priority">
-                  Priority
-                  <select
-                    id="log-priority"
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                  >
-                    {priorityOptions.map((priority) => (
-                      <option key={priority} value={priority}>
-                        {priority}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-downtimeHours">
-                  Expected Downtime (hrs)
-                  <input
-                    id="log-downtimeHours"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    name="downtimeHours"
-                    value={formData.downtimeHours}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                    placeholder="e.g. 1.5"
-                  />
-                </label>
+                <FormField
+                  id="log-status"
+                  name="status"
+                  label="Status"
+                  as="select"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  error={fieldErrors.status}
+                  disabled={isSubmitting}
+                  className="mb-0"
+                >
+                  {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </FormField>
+                <FormField
+                  id="log-priority"
+                  name="priority"
+                  label="Priority"
+                  as="select"
+                  value={formData.priority}
+                  onChange={handleInputChange}
+                  error={fieldErrors.priority}
+                  disabled={isSubmitting}
+                  className="mb-0"
+                >
+                  {priorityOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                </FormField>
+                <FormField
+                  id="log-downtimeHours"
+                  name="downtimeHours"
+                  label="Expected Downtime (hrs)"
+                  type="number"
+                  value={formData.downtimeHours}
+                  onChange={handleInputChange}
+                  error={fieldErrors.downtimeHours}
+                  placeholder="e.g. 1.5"
+                  disabled={isSubmitting}
+                  className="mb-0"
+                  min="0"
+                  step="0.1"
+                />
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-nextServiceDate">
-                  Next Service Due
-                  <input
-                    id="log-nextServiceDate"
-                    type="date"
-                    name="nextServiceDate"
-                    value={formData.nextServiceDate}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-notes">
-                  Notes / Spare Parts
-                  <input
-                    id="log-notes"
-                    type="text"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-                    placeholder="e.g. Order gasket kit in advance"
-                  />
-                </label>
+                <FormField
+                  id="log-nextServiceDate"
+                  name="nextServiceDate"
+                  label="Next Service Due"
+                  type="date"
+                  value={formData.nextServiceDate}
+                  onChange={handleInputChange}
+                  error={fieldErrors.nextServiceDate}
+                  disabled={isSubmitting}
+                  className="mb-0"
+                />
+                <FormField
+                  id="log-notes"
+                  name="notes"
+                  label="Notes / Spare Parts"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  error={fieldErrors.notes}
+                  placeholder="e.g. Order gasket kit in advance"
+                  disabled={isSubmitting}
+                  className="mb-0"
+                />
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
-                >
+              <div className="flex justify-end pt-2">
+                <SubmitButton loading={isSubmitting} loadingLabel="Saving…">
                   Save Task
-                </button>
+                </SubmitButton>
               </div>
             </form>
           </div>
 
+          {/* ── Maintenance board ── */}
           <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
@@ -540,13 +516,11 @@ const MaintenanceLogs = () => {
                 <select
                   id="board-status-filter"
                   value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
                 >
-                  {['All', ...statusOptions].map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
+                  {['All', ...statusOptions].map((s) => (
+                    <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
                 <label className="sr-only" htmlFor="board-search">Search maintenance records</label>
@@ -554,7 +528,7 @@ const MaintenanceLogs = () => {
                   id="board-search"
                   type="search"
                   value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
                   placeholder="Search equipment, task, or technician"
                 />
@@ -570,12 +544,26 @@ const MaintenanceLogs = () => {
             </div>
 
             <div className="mt-6 space-y-4">
-              {sortedLogs.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
-                  No maintenance records found. Use the form above to log your first activity.
-                </div>
+              {isFetching ? (
+                <SpinnerBlock label="Loading maintenance records…" size="lg" tone="green" />
+              ) : fetchError ? (
+                <ErrorState
+                  title="Could not load maintenance records"
+                  description={fetchError}
+                  onRetry={fetchLogs}
+                  retryLabel="Retry"
+                />
+              ) : logs.length === 0 ? (
+                <EmptyState
+                  title="No maintenance records found"
+                  description={
+                    statusFilter !== 'All' || debouncedSearch
+                      ? 'Try adjusting your filters or search term.'
+                      : 'Log your first maintenance task using the form above.'
+                  }
+                />
               ) : (
-                sortedLogs.map((log) => (
+                logs.map((log) => (
                   <article key={log.id} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
@@ -587,6 +575,11 @@ const MaintenanceLogs = () => {
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getPriorityClasses(log.priority)}`}>
                             {log.priority} priority
                           </span>
+                          {log.isOverdue && (
+                            <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-red-100 text-red-700 border border-red-300">
+                              Overdue
+                            </span>
+                          )}
                         </div>
                         <p className="mt-1 text-sm text-gray-600">{log.task}</p>
                         <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-500">
@@ -600,7 +593,7 @@ const MaintenanceLogs = () => {
                               <span className="font-medium text-gray-700">Technician:</span> {log.technician}
                             </div>
                           )}
-                          {log.downtimeHours && (
+                          {log.downtimeHours != null && log.downtimeHours !== '' && (
                             <div>
                               <span className="font-medium text-gray-700">Downtime:</span> {log.downtimeHours} hrs
                             </div>
@@ -608,40 +601,42 @@ const MaintenanceLogs = () => {
                         </div>
                         <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-500">
                           <div>
-                            <span className="font-medium text-gray-700">Scheduled:</span> {formatDate(log.scheduledDate)}
+                            <span className="font-medium text-gray-700">Scheduled:</span> {formatDateDisplay(log.scheduledDate)}
                           </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Next Due:</span> {formatDate(log.nextServiceDate)}
-                          </div>
-                          {log.completedDate && (
+                          {log.nextServiceDate && (
                             <div>
-                              <span className="font-medium text-gray-700">Completed:</span> {formatDate(log.completedDate)}
+                              <span className="font-medium text-gray-700">Next Due:</span> {formatDateDisplay(log.nextServiceDate)}
                             </div>
                           )}
                         </div>
                         {log.notes && <p className="mt-3 text-sm text-gray-600">Notes: {log.notes}</p>}
                       </div>
+
+                      {/* Per-row actions */}
                       <div className="flex flex-col gap-2">
                         <label className="sr-only" htmlFor={`status-${log.id}`}>Update status for {log.machine}</label>
                         <select
                           id={`status-${log.id}`}
                           value={log.status}
-                          onChange={(event) => handleStatusChange(log.id, event.target.value)}
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                          disabled={!!updatingStatus[log.id] || deletingId === log.id}
+                          onChange={(e) => handleStatusChange(log.id, e.target.value)}
+                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
+                          {statusOptions.map((s) => (
+                            <option key={s} value={s}>{s}</option>
                           ))}
                         </select>
+                        {updatingStatus[log.id] && (
+                          <p className="text-xs text-gray-500 text-center">Saving…</p>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleDelete(log.id)}
+                          onClick={() => handleDelete(log.id, log.machine)}
+                          disabled={deletingId === log.id || !!updatingStatus[log.id]}
                           aria-label={`Remove maintenance record for ${log.machine}`}
-                          className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                          className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Remove
+                          {deletingId === log.id ? 'Removing…' : 'Remove'}
                         </button>
                       </div>
                     </div>
@@ -649,9 +644,17 @@ const MaintenanceLogs = () => {
                 ))
               )}
             </div>
+
+            {/* Pagination info */}
+            {pagination && pagination.totalPages > 1 && (
+              <p className="mt-4 text-xs text-gray-500 text-center">
+                Showing {logs.length} of {pagination.total} records (page {pagination.page} of {pagination.totalPages})
+              </p>
+            )}
           </div>
         </div>
 
+        {/* ── Sidebar ── */}
         <div className="space-y-6">
           <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Upcoming Schedule</h2>
@@ -670,7 +673,7 @@ const MaintenanceLogs = () => {
                         <p className="text-xs text-gray-500">{task.task}</p>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getPriorityClasses(task.priority)}`}>
-                        {formatDate(task.scheduledDate)}
+                        {formatDateDisplay(task.scheduledDate)}
                       </span>
                     </div>
                     {task.technician && (
