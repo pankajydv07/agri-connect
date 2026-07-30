@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 import { setAlert } from './alertActions';
 import {
   GET_PRODUCTS,
@@ -8,15 +8,15 @@ import {
   UPDATE_PRODUCT,
   PRODUCT_ERROR,
   CLEAR_PRODUCT,
-  SET_LOADING
+  SET_PRODUCT_LOADING
 } from './types';
 
 // Get all products
 export const getProducts = (queryParams = '') => async dispatch => {
   try {
-    dispatch({ type: SET_LOADING });
+    dispatch({ type: SET_PRODUCT_LOADING });
     
-    const res = await axios.get(`/api/products${queryParams}`);
+    const res = await api.get(`/api/products${queryParams}`);
 
     dispatch({
       type: GET_PRODUCTS,
@@ -33,9 +33,9 @@ export const getProducts = (queryParams = '') => async dispatch => {
 // Get single product
 export const getProduct = id => async dispatch => {
   try {
-    dispatch({ type: SET_LOADING });
+    dispatch({ type: SET_PRODUCT_LOADING });
     
-    const res = await axios.get(`/api/products/${id}`);
+    const res = await api.get(`/api/products/${id}`);
 
     dispatch({
       type: GET_PRODUCT,
@@ -58,7 +58,7 @@ export const addProduct = (formData) => async dispatch => {
       }
     };
 
-    const res = await axios.post('/api/products', formData, config);
+    const res = await api.post('/api/products', formData, config);
 
     dispatch({
       type: ADD_PRODUCT,
@@ -83,7 +83,7 @@ export const updateProduct = (id, formData) => async dispatch => {
       }
     };
 
-    const res = await axios.put(`/api/products/${id}`, formData, config);
+    const res = await api.put(`/api/products/${id}`, formData, config);
 
     dispatch({
       type: UPDATE_PRODUCT,
@@ -103,7 +103,7 @@ export const updateProduct = (id, formData) => async dispatch => {
 export const deleteProduct = id => async dispatch => {
   if (window.confirm('Are you sure you want to delete this product?')) {
     try {
-      await axios.delete(`/api/products/${id}`);
+      await api.delete(`/api/products/${id}`);
 
       dispatch({
         type: DELETE_PRODUCT,
@@ -134,7 +134,7 @@ export const updateProductStatus = (id, status) => async dispatch => {
       }
     };
 
-    const res = await axios.put(`/api/products/${id}/status`, { status }, config);
+    const res = await api.put(`/api/products/${id}/status`, { status }, config);
 
     dispatch({
       type: UPDATE_PRODUCT,

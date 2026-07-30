@@ -72,43 +72,55 @@ const Home = ({ isAuthenticated, user }) => {
   ];
 
   const scrollRef = useRef(null);
-  
+  const intervalRef = useRef(null);
+
   // Set up the automatic scrolling animation
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
-    
+
     let scrollAmount = 0;
     const speed = 0.5; // pixels per frame
-    // Remove unused gap variable
     const totalWidth = scrollContainer.scrollWidth;
     const containerWidth = scrollContainer.clientWidth;
-    
+
     const scroll = () => {
       scrollContainer.scrollLeft = scrollAmount;
       scrollAmount += speed;
-      
+
       // Reset when the scroll reaches the end to create infinite loop effect
       if (scrollAmount >= totalWidth - containerWidth) {
         scrollAmount = 0;
       }
     };
-    
-    const animationId = setInterval(scroll, 20);
-    
-    // Pause the animation when hovering
-    const handleMouseEnter = () => clearInterval(animationId);
-    const handleMouseLeave = () => {
-      clearInterval(animationId);
-      setInterval(scroll, 20);
+
+    const startScrolling = () => {
+      // Always clear any existing interval before starting a new one
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+      intervalRef.current = setInterval(scroll, 20);
     };
-    
+
+    const stopScrolling = () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    startScrolling();
+
+    // Pause the animation when hovering
+    const handleMouseEnter = () => stopScrolling();
+    const handleMouseLeave = () => startScrolling();
+
     scrollContainer.addEventListener('mouseenter', handleMouseEnter);
     scrollContainer.addEventListener('mouseleave', handleMouseLeave);
-    
-    // Clean up
+
+    // Clean up on unmount
     return () => {
-      clearInterval(animationId);
+      stopScrolling();
       scrollContainer.removeEventListener('mouseenter', handleMouseEnter);
       scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
     };
@@ -344,19 +356,6 @@ const Home = ({ isAuthenticated, user }) => {
     </div>
   );
 };
-
-// Add this CSS to hide scrollbars while keeping scrolling functionality
-const scrollbarHideStyle = document.createElement('style');
-scrollbarHideStyle.textContent = `
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-`;
-document.head.appendChild(scrollbarHideStyle);
 
 Home.propTypes = {
   isAuthenticated: PropTypes.bool,

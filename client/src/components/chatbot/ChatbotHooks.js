@@ -1,80 +1,72 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import OpenAI from 'openai';
-import { OPENAI_MODEL } from './ChatbotConfig';
-import axios from 'axios';
+import api, { resolveApiUrl } from '../../utils/api';
 
 /**
- * Custom hook for managing OpenAI API interactions
+ * Normalize the assistant payload returned by POST /api/ai/chat.
+ *
+ * The server owns the provider credentials and the model choice; the browser
+ * only ever sees `{ success, data: { message, toolCalls } }`.
  */
-export const useOpenAI = (apiKey, baseURL) => {
-  const openai = useRef(null);
+const normalizeAssistantMessage = (data) => {
+  const raw = data?.message;
+  const content =
+    typeof raw === 'string' ? raw : raw?.content ?? '';
 
-  // Initialize OpenAI client
-  useEffect(() => {
-    if (!apiKey || !baseURL) return;
-    
-    openai.current = new OpenAI({
-      apiKey,
-      baseURL,
-      dangerouslyAllowBrowser: true
-    });
-  }, [apiKey, baseURL]);
+  return {
+    content,
+    toolCalls: data?.toolCalls || raw?.tool_calls || []
+  };
+};
 
-  // Function to generate AI response
+/**
+ * Custom hook for talking to the server-side AI proxy.
+ *
+ * No provider API key exists in the client: the request is authenticated with
+ * the user's JWT (attached by the shared axios instance) and the server calls
+ * the model on our behalf.
+ */
+export const useAIChat = () => {
   const generateResponse = useCallback(async (messages, functions) => {
-    if (!openai.current) {
-      throw new Error('OpenAI client not initialized');
-    }
+    const payload = { messages };
 
-    const options = {
-      model: OPENAI_MODEL,
-      messages,
-      temperature: 0.7,
-      top_p: 1.0,
-      max_tokens: 500
-    };
-
-    // Add function calling if functions are provided
+    // Function/tool definitions are forwarded in OpenAI tool shape.
     if (functions && functions.length > 0) {
-      options.tools = functions.map(def => ({
+      payload.tools = functions.map(def => ({
         type: 'function',
         function: def
       }));
     }
 
-    return await openai.current.chat.completions.create(options);
+    const res = await api.post('/api/ai/chat', payload);
+
+    if (!res.data || res.data.success === false) {
+      throw new Error(res.data?.message || 'AI request failed');
+    }
+
+    return normalizeAssistantMessage(res.data.data);
   }, []);
 
   return { generateResponse };
 };
 
 /**
- * Custom hook for managing speech-to-text functionality with multiple providers
+ * Custom hook for managing speech-to-text functionality.
+ *
+ * Transcription is always performed server-side (POST /api/speech/transcribe).
+ * The previous browser-side AssemblyAI provider has been removed because it
+ * required shipping a provider API key to the client.
  */
-export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError) => {
+export const useSpeechToText = (onTranscriptionComplete, onError) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const recordingTimeoutRef = useRef(null);
   const audioStreamRef = useRef(null);
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTimer, setRecordingTimer] = useState(0);
   const [transcriptStatus, setTranscriptStatus] = useState('');
-  const [speechProvider, setSpeechProvider] = useState('google'); // 'google' or 'assemblyai'
   const [recognitionLanguage, setRecognitionLanguage] = useState('en-US');
-
-  // Clean up function
-  useEffect(() => {
-    return () => {
-      stopRecording();
-      clearTimeout(recordingTimeoutRef.current);
-      clearInterval(recordingTimerRef.current);
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
 
   // Function to set speech recognition language
   const setLanguage = useCallback((language) => {
@@ -96,100 +88,57 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
     return langCode;
   }, []);
 
-  // Function to change speech provider
-  const changeProvider = useCallback((provider) => {
-    if (provider === 'google' || provider === 'assemblyai') {
-      setSpeechProvider(provider);
-    }
-  }, []);
-
-  // Google Cloud Speech Transcription
-  const transcribeWithGoogle = useCallback(async (audioBlob) => {
+  // Server-side transcription (the server holds the speech provider key).
+  const transcribeAudio = useCallback(async (audioBlob) => {
     try {
       setTranscriptStatus('processing');
-      
-      // Create a FormData object to send the audio
+
       const formData = new FormData();
       formData.append('audio', audioBlob);
       formData.append('language', recognitionLanguage);
-      
-      // Send to our server endpoint
-      const response = await axios.post('/api/speech/transcribe', formData, {
+
+      const response = await api.post('/api/speech/transcribe', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       if (response.data && response.data.transcript) {
         setTranscriptStatus('completed');
         return response.data.transcript;
-      } else {
-        throw new Error('No transcript returned');
       }
+
+      throw new Error('No transcript returned');
     } catch (error) {
       setTranscriptStatus('error');
       throw error;
     }
   }, [recognitionLanguage]);
 
-  // AssemblyAI Transcription
-  const transcribeWithAssemblyAI = useCallback(async (audioBlob) => {
-    try {
-      setTranscriptStatus('processing');
-      
-      // Upload the audio file
-      const uploadRes = await fetch("https://api.assemblyai.com/v2/upload", {
-        method: "POST",
-        headers: { authorization: assemblyAiKey },
-        body: audioBlob
-      });
-      
-      const { upload_url } = await uploadRes.json();
+  // Function to stop recording
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
 
-      // Request the transcription
-      const transcriptRes = await fetch("https://api.assemblyai.com/v2/transcript", {
-        method: "POST",
-        headers: {
-          authorization: assemblyAiKey,
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({ 
-          audio_url: upload_url,
-          language_code: recognitionLanguage.split('-')[0] // Convert "en-US" to "en"
-        })
-      });
+      clearTimeout(recordingTimeoutRef.current);
+      clearInterval(recordingTimerRef.current);
 
-      const { id } = await transcriptRes.json();
-      
-      setTranscriptStatus('transcribing');
-
-      // Poll for results
-      let transcriptText = "";
-      while (true) {
-        const polling = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-          headers: { authorization: assemblyAiKey }
-        });
-        
-        const data = await polling.json();
-
-        if (data.status === "completed") {
-          transcriptText = data.text || "";
-          break;
-        } else if (data.status === "failed") {
-          throw new Error('Transcription failed');
-        }
-        
-        // Wait before polling again
-        await new Promise(r => setTimeout(r, 2000));
-      }
-
-      setTranscriptStatus('completed');
-      return transcriptText;
-    } catch (error) {
-      setTranscriptStatus('error');
-      throw error;
+      setIsRecording(false);
+      setRecordingTimer(0);
     }
-  }, [assemblyAiKey, recognitionLanguage]);
+  }, []);
+
+  // Release the recorder, timers and microphone track on unmount.
+  useEffect(() => {
+    return () => {
+      stopRecording();
+      clearTimeout(recordingTimeoutRef.current);
+      clearInterval(recordingTimerRef.current);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stopRecording]);
 
   // Function to start recording
   const startRecording = useCallback(async (timeoutMs, language = null) => {
@@ -216,15 +165,9 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
       mediaRecorderRef.current.onstop = async () => {
         try {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          
-          // Choose the transcription provider
-          let transcriptText = "";
-          if (speechProvider === 'google') {
-            transcriptText = await transcribeWithGoogle(audioBlob);
-          } else {
-            transcriptText = await transcribeWithAssemblyAI(audioBlob);
-          }
-          
+
+          const transcriptText = await transcribeAudio(audioBlob);
+
           // Stop all tracks on the stream
           if (audioStreamRef.current) {
             audioStreamRef.current.getTracks().forEach(track => track.stop());
@@ -254,20 +197,7 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
       setTranscriptStatus('error');
       onError(error);
     }
-  }, [transcribeWithGoogle, transcribeWithAssemblyAI, speechProvider, onTranscriptionComplete, onError, setLanguage]);
-
-  // Function to stop recording
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      
-      clearTimeout(recordingTimeoutRef.current);
-      clearInterval(recordingTimerRef.current);
-      
-      setIsRecording(false);
-      setRecordingTimer(0);
-    }
-  }, []);
+  }, [transcribeAudio, stopRecording, onTranscriptionComplete, onError, setLanguage]);
 
   return {
     isRecording,
@@ -276,8 +206,7 @@ export const useSpeechToText = (assemblyAiKey, onTranscriptionComplete, onError)
     recognitionLanguage,
     startRecording,
     stopRecording,
-    setLanguage,
-    changeProvider
+    setLanguage
   };
 };
 
@@ -320,56 +249,44 @@ export const useTextToSpeech = () => {
       
       // Get the correct TTS language code
       const ttsLanguage = getTTSLanguageCode(language);
-      console.log('Sending text to TTS:', truncatedText);
-      console.log('Language:', language, 'TTS Language:', ttsLanguage);
-      
-      const response = await fetch('http://localhost:5000/api/speak', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          message: truncatedText,
-          language: ttsLanguage
-        }),
+
+      // Synthesis happens server-side; the server holds the TTS provider key.
+      const { data } = await api.post('/api/speak', {
+        message: truncatedText,
+        language: ttsLanguage
       });
 
-      if (!response.ok) {
+      if (!data || !data.file) {
         throw new Error('Failed to generate speech');
       }
 
-      const data = await response.json();
-      console.log('Received audio file:', data.file);
-      
       // Create a new audio element
       const audio = new Audio();
       audioRef.current = audio;
-      
+
       // Set up event listeners
       audio.oncanplaythrough = () => {
-        console.log('Audio is ready to play');
         audio.play().catch(error => {
           console.error('Error playing audio:', error);
           setIsSpeaking(false);
           setCurrentSpeakingIndex(null);
         });
       };
-      
+
       audio.onerror = (error) => {
         console.error('Audio playback error:', error);
         setIsSpeaking(false);
         setCurrentSpeakingIndex(null);
       };
-      
+
       audio.onended = () => {
-        console.log('Audio playback ended');
         setIsSpeaking(false);
         setCurrentSpeakingIndex(null);
       };
-      
-      // Set the source and start loading
-      audio.src = data.file;
-      
+
+      // The server returns a URL path; resolve it against the API origin.
+      audio.src = resolveApiUrl(data.file);
+
     } catch (error) {
       console.error('Error in text-to-speech:', error);
       setIsSpeaking(false);

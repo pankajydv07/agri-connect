@@ -1,74 +1,55 @@
+/**
+ * Text-to-speech synthesis.
+ *
+ * Two changes from the original beyond credential handling:
+ *  - It no longer writes to disk. Every call used to overwrite the same
+ *    `uploads/farmer-output.mp3`, so two users speaking at once got each
+ *    other's audio. Returning a buffer lets the caller decide.
+ *  - The chatty `console.log` of every phrase synthesised is gone.
+ */
+
 const textToSpeech = require('@google-cloud/text-to-speech');
-const fs = require('fs');
-const util = require('util');
-const path = require('path');
+const { clientOptions, assertConfigured } = require('./utils/googleCloud');
+const logger = require('./config/logger');
 
-// Load the Google credentials JSON file
-const client = new textToSpeech.TextToSpeechClient({
-  keyFilename: 'key.json', // <-- Update this with your actual key file path
-});
-
-// Voice configurations for different languages
-const voiceConfigs = {
-  'en-US': {
-    languageCode: 'en-US',
-    name: 'en-US-Neural2-F',
-    ssmlGender: 'FEMALE'
-  },
-  'hi-IN': {
-    languageCode: 'hi-IN',
-    name: 'hi-IN-Neural2-A',
-    ssmlGender: 'FEMALE'
-  },
-  'te-IN': {
-    languageCode: 'te-IN',
-    name: 'te-IN-Standard-A',
-    ssmlGender: 'FEMALE'
-  }
+const VOICE_CONFIGS = {
+  'en-US': { languageCode: 'en-US', name: 'en-US-Neural2-F', ssmlGender: 'FEMALE' },
+  'hi-IN': { languageCode: 'hi-IN', name: 'hi-IN-Neural2-A', ssmlGender: 'FEMALE' },
+  'te-IN': { languageCode: 'te-IN', name: 'te-IN-Standard-A', ssmlGender: 'FEMALE' },
 };
 
-const convertTextToSpeech = async (text, filename = 'output.mp3', language = 'en-US') => {
-  try {
-    console.log('Converting text to speech:', text);
-    console.log('Language:', language);
-    
-    // Get voice configuration based on language
-    const voiceConfig = voiceConfigs[language] || voiceConfigs['en-US'];
-    console.log('Using voice config:', voiceConfig);
-    
-    const request = {
-      input: { text },
-      voice: voiceConfig,
-      audioConfig: { 
-        audioEncoding: 'MP3',
-        pitch: 0,
-        speakingRate: 1.0
-      },
-    };
+let client;
 
-    console.log('Sending request to Google TTS');
-    const [response] = await client.synthesizeSpeech(request);
-    console.log('Received response from Google TTS');
-
-    const writeFile = util.promisify(fs.writeFile);
-    
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir);
-    }
-    
-    const filePath = path.join(uploadsDir, filename);
-    console.log('Writing audio file to:', filePath);
-    
-    await writeFile(filePath, response.audioContent, 'binary');
-    console.log('Audio file written successfully');
-    
-    return filename;
-  } catch (error) {
-    console.error('Error in text-to-speech conversion:', error);
-    throw error;
+/** Built lazily so an unconfigured server still boots and serves everything else. */
+const getClient = () => {
+  assertConfigured();
+  if (!client) {
+    client = new textToSpeech.TextToSpeechClient(clientOptions());
   }
+  return client;
 };
 
-module.exports = convertTextToSpeech; 
+/**
+ * @param {string} text
+ * @param {string} language One of the keys of VOICE_CONFIGS.
+ * @returns {Promise<Buffer>} MP3 audio.
+ */
+const synthesizeSpeech = async (text, language = 'en-US') => {
+  const voice = VOICE_CONFIGS[language] || VOICE_CONFIGS['en-US'];
+
+  const [response] = await getClient().synthesizeSpeech({
+    input: { text },
+    voice,
+    audioConfig: { audioEncoding: 'MP3', pitch: 0, speakingRate: 1.0 },
+  });
+
+  if (!response.audioContent) {
+    throw new Error('Text-to-speech returned no audio content');
+  }
+
+  logger.debug({ language, characters: text.length }, 'Synthesised speech');
+
+  return Buffer.from(response.audioContent);
+};
+
+module.exports = { synthesizeSpeech, VOICE_CONFIGS };

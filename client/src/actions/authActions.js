@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 import { setAlert } from './alertActions';
 import {
   REGISTER_SUCCESS,
@@ -14,12 +14,19 @@ import setAuthToken from '../utils/setAuthToken';
 
 // Load User
 export const loadUser = () => async dispatch => {
-  if (localStorage.token) {
-    setAuthToken(localStorage.token);
+  const token = localStorage.getItem('token');
+
+  // No token: settle into the unauthenticated state without a pointless
+  // request that would only come back 401.
+  if (!token) {
+    dispatch({ type: AUTH_ERROR });
+    return;
   }
 
+  setAuthToken(token);
+
   try {
-    const res = await axios.get('/api/auth/me');
+    const res = await api.get('/api/auth/me');
 
     dispatch({
       type: USER_LOADED,
@@ -35,7 +42,7 @@ export const loadUser = () => async dispatch => {
 // Register User
 export const register = (formData) => async dispatch => {
   try {
-    const res = await axios.post('/api/auth/register', formData);
+    const res = await api.post('/api/auth/register', formData);
 
     dispatch({
       type: REGISTER_SUCCESS,
@@ -67,7 +74,7 @@ export const login = (email, password) => async dispatch => {
   const body = JSON.stringify({ email, password });
 
   try {
-    const res = await axios.post('/api/auth/login', body, config);
+    const res = await api.post('/api/auth/login', body, config);
 
     dispatch({
       type: LOGIN_SUCCESS,
@@ -97,7 +104,7 @@ export const updateProfile = (formData) => async dispatch => {
       }
     };
 
-    const res = await axios.put('/api/auth/profile', formData, config);
+    const res = await api.put('/api/auth/profile', formData, config);
 
     dispatch({
       type: USER_LOADED,
@@ -127,7 +134,7 @@ export const changePassword = (passwordData) => async dispatch => {
       }
     };
 
-    await axios.put('/api/auth/change-password', passwordData, config);
+    await api.put('/api/auth/change-password', passwordData, config);
 
     dispatch(setAlert('Password Changed Successfully', 'success'));
     

@@ -4,7 +4,7 @@ import {
     GET_STATS,
     DELETE_USER,
     ADMIN_ERROR,
-    SET_LOADING
+    SET_ADMIN_LOADING
   } from '../actions/types';
   
   const initialState = {
@@ -47,7 +47,7 @@ import {
           error: payload,
           loading: false
         };
-      case SET_LOADING:
+      case SET_ADMIN_LOADING:
         return {
           ...state,
           loading: true

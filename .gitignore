@@ -1,30 +1,36 @@
-# Ignore all node_modules directories
-node_modules/
 # Dependencies
-/node_modules
-/client/node_modules
+node_modules/
 /.pnp
 .pnp.js
 
 # Testing
-/coverage
-/client/coverage
+coverage/
 
-# Production
-/build
-/client/build
+# Production builds
+build/
+dist/
 
-# Environment variables
+# ---------------------------------------------------------------------------
+# Secrets
+#
+# This repository previously had a Google Cloud service-account private key
+# committed in two places (server/google-credentials.json and server/key.json).
+# These patterns exist so that cannot happen again — credentials belong in
+# environment variables, never in the working tree.
+# ---------------------------------------------------------------------------
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-/client/.env
-/client/.env.local
-/client/.env.development.local
-/client/.env.test.local
-/client/.env.production.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+google-credentials.json
+key.json
+service-account*.json
+gcp-*.json
+credentials.json
+secrets.json
 
 # Logs
 logs
@@ -35,7 +41,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor directories and files
+# Editors and OS
 .idea
 .vscode
 *.suo
@@ -44,20 +50,12 @@ lerna-debug.log*
 *.sln
 *.sw?
 .DS_Store
+Thumbs.db
 
-# Uploaded files
-/uploads/*
-!/uploads/.gitkeep
-
-# Database
-*.sqlite
-*.sqlite3
+# Local uploads (images now stream to Cloudinary; generated audio goes to tmp)
+uploads/
+!uploads/.gitkeep
 
 # Misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 .cache
-dist
+*.tsbuildinfo

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './CropRecommendation.css';
@@ -34,17 +34,28 @@ const CropRecommendation = () => {
     setRecommendation('');
 
     try {
-      const response = await axios.post('/api/crop/recommend', formData);
-      if (response.data && response.data.recommendation) {
-        setRecommendation(response.data.recommendation);
+      const response = await api.post('/api/crop/recommend', formData);
+
+      // The endpoint answers { success, data }; older builds returned a bare
+      // { recommendation } body, so accept either shape.
+      const payload = response.data?.data ?? response.data;
+      const recommendationText =
+        typeof payload === 'string' ? payload : payload?.recommendation;
+
+      if (recommendationText) {
+        setRecommendation(recommendationText);
       } else {
         setError('Invalid response from server. Please try again.');
       }
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Crop recommendation failed:', err);
       if (err.response) {
         // Server responded with an error
-        setError(err.response.data.error || 'Failed to get crop recommendation. Please try again.');
+        setError(
+          err.response.data?.error ||
+            err.response.data?.message ||
+            'Failed to get crop recommendation. Please try again.'
+        );
       } else if (err.request) {
         // Request was made but no response received
         setError('No response from server. Please check your internet connection.');
