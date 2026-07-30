@@ -1,5 +1,15 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import DemoBanner from '../../components/ui/DemoBanner';
+
+// TODO: replace localStorage persistence with a real backend resource.
+// Suggested endpoints:
+//   GET    /api/maintenance-logs          — list all logs for the current user/org
+//   POST   /api/maintenance-logs          — create a new log entry
+//   PATCH  /api/maintenance-logs/:id      — update status
+//   DELETE /api/maintenance-logs/:id      — remove a log
+// Until this is wired up, every entry disappears when localStorage is cleared
+// or the user switches browsers/devices.
 
 const statusOptions = ['Scheduled', 'In Progress', 'Completed', 'Delayed', 'On Hold'];
 const priorityOptions = ['Low', 'Medium', 'High', 'Critical'];
@@ -289,6 +299,20 @@ const MaintenanceLogs = () => {
 
   return (
     <div className="space-y-8">
+      {/* Non-dismissible demo banner — data lives only in localStorage, not a
+          real backend. Remove this banner once a real API is wired up. */}
+      <DemoBanner
+        tone="warning"
+        tag="Demo — local data only"
+        title="Maintenance records are not saved to a server"
+        points={[
+          'All entries are stored in this browser\'s localStorage only.',
+          'Records will be lost if you clear your browser data, use a different device, or use a different browser.',
+          'There is no shared view — other users cannot see the entries you add here.',
+          'A real backend API must be connected before this feature is production-ready.'
+        ]}
+      />
+
       <div className="bg-white shadow rounded-xl border border-gray-100 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -300,12 +324,14 @@ const MaintenanceLogs = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
+              type="button"
               onClick={handleClearLogs}
               className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
             >
               Clear Logbook
             </button>
             <button
+              type="button"
               onClick={() => setFormData(initialFormState)}
               className="inline-flex items-center justify-center rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
             >
@@ -345,6 +371,7 @@ const MaintenanceLogs = () => {
             <p className="mt-1 text-sm text-gray-600">Capture the essentials for scheduling, traceability, and compliance.</p>
             {(error || success) && (
               <div
+                role="alert"
                 className={`mt-4 rounded-lg border px-4 py-3 text-sm font-medium ${
                   error
                     ? 'border-red-200 bg-red-50 text-red-600'
@@ -354,11 +381,12 @@ const MaintenanceLogs = () => {
                 {error || success}
               </div>
             )}
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+            <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-machine">
                   Equipment / Asset
                   <input
+                    id="log-machine"
                     type="text"
                     name="machine"
                     value={formData.machine}
@@ -367,9 +395,10 @@ const MaintenanceLogs = () => {
                     placeholder="e.g. Boiler #1"
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-location">
                   Location / Line
                   <input
+                    id="log-location"
                     type="text"
                     name="location"
                     value={formData.location}
@@ -379,9 +408,10 @@ const MaintenanceLogs = () => {
                   />
                 </label>
               </div>
-              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+              <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-task">
                 Task Description
                 <input
+                  id="log-task"
                   type="text"
                   name="task"
                   value={formData.task}
@@ -391,9 +421,10 @@ const MaintenanceLogs = () => {
                 />
               </label>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-technician">
                   Technician / Team
                   <input
+                    id="log-technician"
                     type="text"
                     name="technician"
                     value={formData.technician}
@@ -402,9 +433,10 @@ const MaintenanceLogs = () => {
                     placeholder="e.g. Mechanical Crew"
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-scheduledDate">
                   Scheduled Date
                   <input
+                    id="log-scheduledDate"
                     type="date"
                     name="scheduledDate"
                     value={formData.scheduledDate}
@@ -414,9 +446,10 @@ const MaintenanceLogs = () => {
                 </label>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-status">
                   Status
                   <select
+                    id="log-status"
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
@@ -429,9 +462,10 @@ const MaintenanceLogs = () => {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-priority">
                   Priority
                   <select
+                    id="log-priority"
                     name="priority"
                     value={formData.priority}
                     onChange={handleInputChange}
@@ -444,9 +478,10 @@ const MaintenanceLogs = () => {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-downtimeHours">
                   Expected Downtime (hrs)
                   <input
+                    id="log-downtimeHours"
                     type="number"
                     min="0"
                     step="0.1"
@@ -459,9 +494,10 @@ const MaintenanceLogs = () => {
                 </label>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-nextServiceDate">
                   Next Service Due
                   <input
+                    id="log-nextServiceDate"
                     type="date"
                     name="nextServiceDate"
                     value={formData.nextServiceDate}
@@ -469,9 +505,10 @@ const MaintenanceLogs = () => {
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700" htmlFor="log-notes">
                   Notes / Spare Parts
                   <input
+                    id="log-notes"
                     type="text"
                     name="notes"
                     value={formData.notes}
@@ -499,7 +536,9 @@ const MaintenanceLogs = () => {
                 <p className="mt-1 text-sm text-gray-600">Filter by status or search across assets, technicians, and locations.</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <label className="sr-only" htmlFor="board-status-filter">Filter by status</label>
                 <select
+                  id="board-status-filter"
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
@@ -510,7 +549,9 @@ const MaintenanceLogs = () => {
                     </option>
                   ))}
                 </select>
+                <label className="sr-only" htmlFor="board-search">Search maintenance records</label>
                 <input
+                  id="board-search"
                   type="search"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -520,6 +561,7 @@ const MaintenanceLogs = () => {
                 <button
                   type="button"
                   onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                  aria-label={`Sort by date ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
                   className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Sort {sortDirection === 'asc' ? '↑' : '↓'}
@@ -534,7 +576,7 @@ const MaintenanceLogs = () => {
                 </div>
               ) : (
                 sortedLogs.map((log) => (
-                  <div key={log.id} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <article key={log.id} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -580,7 +622,9 @@ const MaintenanceLogs = () => {
                         {log.notes && <p className="mt-3 text-sm text-gray-600">Notes: {log.notes}</p>}
                       </div>
                       <div className="flex flex-col gap-2">
+                        <label className="sr-only" htmlFor={`status-${log.id}`}>Update status for {log.machine}</label>
                         <select
+                          id={`status-${log.id}`}
                           value={log.status}
                           onChange={(event) => handleStatusChange(log.id, event.target.value)}
                           className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
@@ -594,13 +638,14 @@ const MaintenanceLogs = () => {
                         <button
                           type="button"
                           onClick={() => handleDelete(log.id)}
+                          aria-label={`Remove maintenance record for ${log.machine}`}
                           className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
                         >
                           Remove
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 ))
               )}
             </div>
