@@ -71,19 +71,53 @@ two files: `server/google-credentials.json` and `server/key.json`.
 `server/controllers/cropController.js`. According to the token metadata the key
 was valid until 2030.
 
+> **Current application status:** The application no longer calls Nebius at all.
+> All LLM features have been migrated to Groq. Revoking this key is therefore
+> pure cleanup — it has no service impact on the running application — but it is
+> still mandatory because the token remains in git history and could be used to
+> run up charges on the Nebius account.
+
 **Rotation steps:**
 
 1. Log in to the [Nebius Console](https://console.eu.nebius.com/).
 2. Navigate to your service account or API key management section and **revoke**
-   the compromised key immediately.
-3. Create a replacement key.
-4. Set `NEBIUS_API_KEY=<new-key>` in `server/.env` (or your secrets manager).
-5. Review API call logs in the Nebius Console for any unexpected crop-recommendation
-   requests that might indicate the key was already abused.
+   the compromised key immediately. No replacement is needed — the application
+   no longer uses Nebius.
+3. Review API call logs in the Nebius Console for any unexpected
+   crop-recommendation requests that might indicate the key was already abused.
 
 ---
 
-### 3. AssemblyAI and ElevenLabs API Keys
+### 3. Groq API Key
+
+**Where it lives and how it is injected:**
+
+`GROQ_API_KEY` is a server-side secret. It must be set in `server/.env` for
+local development, or injected via your deployment secrets manager / CI
+environment for staging and production. The authoritative variable list is in
+`server/config/env.js`.
+
+**It must never appear in a `REACT_APP_*` variable.** React's CRA build inlines
+every `REACT_APP_*` variable into the client bundle at compile time, making it
+publicly readable by anyone who opens DevTools. The Groq client lives in
+`server/utils/groq.js` and is only reachable from server-side code.
+
+**If a Groq key is compromised:**
+
+1. Log in to the [Groq Console](https://console.groq.com/keys).
+2. Revoke the exposed key immediately.
+3. Create a replacement key and set it in `server/.env` (or your secrets
+   manager).
+4. Check the Groq usage dashboard for unexpected requests.
+
+**Degradation behaviour:** If `GROQ_API_KEY` is absent or revoked, the server
+starts normally and logs a warning. Any call to an AI endpoint (`/api/ai/chat`,
+`/api/crop/recommend`, `/api/pest-detection`) returns `503 Service Unavailable`.
+Weather and speech are unaffected — they use different providers.
+
+---
+
+### 4. AssemblyAI and ElevenLabs API Keys
 
 **What was leaked:** Both keys were placed in `client/src/config/apiKeys.js` and
 shipped in every browser bundle sent to visitors.
@@ -106,7 +140,7 @@ shipped in every browser bundle sent to visitors.
 
 ---
 
-### 4. GitHub Personal Access Tokens
+### 5. GitHub Personal Access Tokens
 
 **What was leaked:** Two GitHub PATs were hardcoded:
 
@@ -211,6 +245,7 @@ The following security controls are in place as of the production-ready rewrite:
 | Authentication | `jsonwebtoken` (HS256) | Minimum 32-char secret enforced in production; tokens expire (default 7 days) |
 | Passwords | `bcryptjs` | Default cost factor 12 |
 | File uploads | `multer` + Cloudinary | Size limits enforced; files go to Cloudinary, not the repo or filesystem |
-| AI provider keys | Server-side only | No `REACT_APP_*` key is set; the browser never sees a provider credential |
+| AI provider keys | Server-side only | `GROQ_API_KEY` is injected via `server/.env` or a secrets manager; it must never appear in a `REACT_APP_*` variable |
+| Weather | No credential required | Open-Meteo is called directly with no API key; the weather feature adds no new secret surface |
 | Error handling | Central error handler | Stack traces suppressed in production responses |
 | Secret scanning | Gitleaks (CI) | Runs on every push and pull request to `main` |
