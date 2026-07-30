@@ -27,6 +27,9 @@ const adminRoutes = require('./routes/admin');
 const cropRoutes = require('./routes/cropRoutes');
 const aiRoutes = require('./routes/ai');
 const speechRoutes = require('./routes/speech');
+const weatherRoutes = require('./routes/weather');
+const pestRoutes = require('./routes/pest');
+const maintenanceRoutes = require('./routes/maintenance');
 
 const app = express();
 
@@ -105,8 +108,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crop', cropRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/weather', weatherRoutes);
+app.use('/api/pest-detection', pestRoutes);
+app.use('/api/maintenance-logs', maintenanceRoutes);
 app.use('/api/speech', speechRoutes);
-// Kept at its original path so the existing client keeps working.
+// Kept at its original path so the existing client keeps working: the router
+// answers '/' as well as '/speak', so POST /api/speak resolves here.
 app.use('/api/speak', speechRoutes);
 
 app.use(notFound);

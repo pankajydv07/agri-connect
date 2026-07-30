@@ -54,6 +54,16 @@ const phone = z
 const positiveNumber = (label) =>
   z.coerce.number({ invalid_type_error: `${label} must be a number` }).positive(`${label} must be greater than zero`);
 
+/**
+ * HTML form inputs submit '' for a cleared field, which fails `coerce.date()`
+ * and `coerce.number()` even when the field is optional. Treat empty as absent.
+ */
+const emptyToUndefined = (value) => (value === '' || value === null ? undefined : value);
+
+// Kept in sync with the enums on the MaintenanceLog model.
+const MAINTENANCE_STATUSES = ['Scheduled', 'In Progress', 'Completed', 'Delayed', 'On Hold'];
+const MAINTENANCE_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+
 // --- Schemas ---------------------------------------------------------------
 
 const schemas = {
@@ -172,6 +182,64 @@ const schemas = {
   speak: z.object({
     message: z.string().trim().min(1, 'Nothing to speak').max(2000),
     language: z.enum(['en-US', 'hi-IN', 'te-IN']).default('en-US'),
+  }),
+
+  weatherQuery: z.object({
+    location: z.string().trim().min(2, 'Please provide a location').max(200),
+    // Open-Meteo serves up to 16 days; 7 is plenty for farm planning and keeps
+    // the response small enough to speak aloud.
+    days: z.coerce.number().int().min(1).max(7).default(3),
+  }),
+
+  pestDetection: z.object({
+    // Optional hint from the farmer — "these are my tomato plants" measurably
+    // improves the model's reading.
+    cropHint: z.string().trim().max(120).optional(),
+    language: z.enum(['en', 'hi', 'te']).optional(),
+  }),
+
+  createMaintenanceLog: z.object({
+    machine: z.string().trim().min(2, 'Please name the machine').max(150),
+    location: z.string().trim().min(2, 'Please add a location').max(150),
+    task: z.string().trim().min(3, 'Please describe the task').max(1000),
+    technician: z.string().trim().min(2, 'Please name the technician').max(150),
+    scheduledDate: z.coerce.date({ invalid_type_error: 'Scheduled date is invalid' }),
+    // HTML date inputs submit '' when cleared, which is not a valid date — map
+    // it to "absent" rather than failing validation on an empty optional field.
+    nextServiceDate: z.preprocess(emptyToUndefined, z.coerce.date().optional().nullable()),
+    status: z.enum(MAINTENANCE_STATUSES).optional(),
+    priority: z.enum(MAINTENANCE_PRIORITIES).optional(),
+    downtimeHours: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number().min(0, 'Downtime cannot be negative').max(10000).optional()
+    ),
+    notes: z.preprocess(emptyToUndefined, z.string().trim().max(2000).optional()),
+  }),
+
+  updateMaintenanceLog: z
+    .object({
+      machine: z.string().trim().min(2).max(150).optional(),
+      location: z.string().trim().min(2).max(150).optional(),
+      task: z.string().trim().min(3).max(1000).optional(),
+      technician: z.string().trim().min(2).max(150).optional(),
+      scheduledDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
+      nextServiceDate: z.preprocess(emptyToUndefined, z.coerce.date().optional().nullable()),
+      status: z.enum(MAINTENANCE_STATUSES).optional(),
+      priority: z.enum(MAINTENANCE_PRIORITIES).optional(),
+      downtimeHours: z.preprocess(emptyToUndefined, z.coerce.number().min(0).max(10000).optional()),
+      notes: z.preprocess(emptyToUndefined, z.string().trim().max(2000).optional()),
+    })
+    .refine((data) => Object.keys(data).length > 0, {
+      message: 'Provide at least one field to update',
+    }),
+
+  maintenanceListQuery: z.object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().positive().max(100).default(25),
+    status: z.enum(MAINTENANCE_STATUSES).optional(),
+    priority: z.enum(MAINTENANCE_PRIORITIES).optional(),
+    search: z.string().trim().max(150).optional(),
+    sort: z.enum(['asc', 'desc']).default('asc'),
   }),
 
   idParam: z.object({ id: objectId }),

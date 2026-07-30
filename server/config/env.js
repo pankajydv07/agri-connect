@@ -65,8 +65,11 @@ const cloudinaryConfigured = Boolean(
     process.env.CLOUDINARY_API_SECRET
 );
 
-const nebiusConfigured = Boolean(process.env.NEBIUS_API_KEY);
-const openaiConfigured = Boolean(process.env.OPENAI_API_KEY);
+// Groq now serves every LLM call — the assistant, crop recommendation and pest
+// detection. It replaces the previous split between Nebius (whose bearer token
+// was hardcoded in a controller) and OpenAI.
+const groqConfigured = Boolean(process.env.GROQ_API_KEY);
+
 const googleCloudConfigured = Boolean(
   process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_CREDENTIALS_JSON
 );
@@ -75,11 +78,10 @@ if (!isTest) {
   if (!cloudinaryConfigured) {
     warnings.push('Cloudinary is not configured — product image upload will be rejected.');
   }
-  if (!nebiusConfigured) {
-    warnings.push('NEBIUS_API_KEY is not set — crop recommendation will be unavailable.');
-  }
-  if (!openaiConfigured) {
-    warnings.push('OPENAI_API_KEY is not set — the AI assistant will be unavailable.');
+  if (!groqConfigured) {
+    warnings.push(
+      'GROQ_API_KEY is not set — the AI assistant, crop recommendation and pest detection will be unavailable.'
+    );
   }
   if (!googleCloudConfigured) {
     warnings.push(
@@ -140,19 +142,22 @@ const env = {
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
 
-  nebius: {
-    configured: nebiusConfigured,
-    apiKey: process.env.NEBIUS_API_KEY,
-    baseUrl: process.env.NEBIUS_BASE_URL || 'https://api.studio.nebius.com/v1',
-    model:
-      process.env.NEBIUS_MODEL ||
-      'meta-llama/Meta-Llama-3.1-8B-Instruct-fast-LoRa:CropRecommendation-ZIHX',
-  },
-
-  openai: {
-    configured: openaiConfigured,
-    apiKey: process.env.OPENAI_API_KEY,
-    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  /**
+   * Groq. The API is OpenAI-compatible, so the `openai` SDK talks to it with
+   * nothing but a baseURL override — no extra dependency.
+   *
+   * Every model id is overridable from the environment on purpose. Groq rotates
+   * and deprecates models on short notice (their docs warn about exactly this
+   * for preview models), so a hardcoded id is a scheduled outage.
+   */
+  groq: {
+    configured: groqConfigured,
+    apiKey: process.env.GROQ_API_KEY,
+    baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
+    // Tool-calling chat model for the assistant and crop recommendation.
+    chatModel: process.env.GROQ_CHAT_MODEL || 'llama-3.3-70b-versatile',
+    // Multimodal model for pest detection — supports image input and JSON mode.
+    visionModel: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
   },
 
   googleCloud: {
