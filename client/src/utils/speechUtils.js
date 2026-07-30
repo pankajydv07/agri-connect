@@ -1,4 +1,8 @@
 // src/utils/speechUtils.js
+//
+// Browser-side recording helpers. Transcription and synthesis are proxied by
+// our server so that no speech-provider API key is ever shipped to the client.
+import api, { resolveApiUrl } from './api';
 
 // Start recording audio
 export const startRecording = async () => {
@@ -41,92 +45,30 @@ export const startRecording = async () => {
     }
   };
   
-  // Transcribe audio using AssemblyAI
-  export const transcribeAudio = async (audioBlob, apiKey) => {
-    // First upload the audio file
-    const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
-      method: 'POST',
-      headers: {
-        'authorization': apiKey
-      },
-      body: audioBlob
+  // Transcribe audio via our server (which holds the speech provider key).
+  export const transcribeAudio = async (audioBlob, language = 'en-US') => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob);
+    formData.append('language', language);
+
+    const { data } = await api.post('/api/speech/transcribe', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
-    
-    if (!uploadResponse.ok) {
-      throw new Error('Failed to upload audio');
+
+    if (!data || !data.transcript) {
+      throw new Error('No transcript returned');
     }
-    
-    const { upload_url } = await uploadResponse.json();
-    
-    // Then request transcription
-    const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
-      method: 'POST',
-      headers: {
-        'authorization': apiKey,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({ audio_url: upload_url })
-    });
-    
-    if (!transcriptResponse.ok) {
-      throw new Error('Failed to request transcription');
-    }
-    
-    const { id } = await transcriptResponse.json();
-    
-    // Poll for transcription result
-    let attempts = 0;
-    const maxAttempts = 60; // Maximum polling attempts (60 seconds)
-    
-    while (attempts < maxAttempts) {
-      const pollingResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-        headers: { 
-          'authorization': apiKey
-        }
-      });
-      
-      if (!pollingResponse.ok) {
-        throw new Error('Failed to poll for transcription');
-      }
-      
-      const data = await pollingResponse.json();
-      
-      if (data.status === 'completed') {
-        return data.text;
-      } else if (data.status === 'error') {
-        throw new Error('Transcription failed: ' + data.error);
-      }
-      
-      // Wait 1 second before polling again
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      attempts++;
-    }
-    
-    throw new Error('Transcription timed out');
+
+    return data.transcript;
   };
-  
-  // Convert text to speech using ElevenLabs
-  export const textToSpeech = async (text, apiKey) => {
-    const response = await fetch("https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM/stream", {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text,
-        voice_settings: {
-          stability: 0.75,
-          similarity_boost: 0.75
-        }
-      })
-    });
-    
-    if (!response.ok) {
+
+  // Convert text to speech via our server (which holds the TTS provider key).
+  export const textToSpeech = async (text, language = 'en-US') => {
+    const { data } = await api.post('/api/speak', { message: text, language });
+
+    if (!data || !data.file) {
       throw new Error('Failed to get speech synthesis');
     }
-    
-    const audioBlob = await response.blob();
-    return URL.createObjectURL(audioBlob);
+
+    return resolveApiUrl(data.file);
   };
-  

@@ -1,8 +1,9 @@
 // Chatbot configuration constants
 export const RECORDING_TIMEOUT = 10000; // 10 seconds
-export const VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
-export const OPENAI_MODEL = 'openai/gpt-4.1';
 export const MAX_SPEECH_LENGTH = 300;
+
+// NOTE: the model name and the TTS voice id are chosen server-side now, along
+// with the provider credentials. Nothing provider-specific belongs in here.
 
 // System prompt for the AI assistant
 export const SYSTEM_PROMPT = `You are an AI assistant for AgriConnect, an agricultural marketplace platform that connects farmers directly with buyers. 

@@ -6,7 +6,7 @@ import {
     UPDATE_PRODUCT,
     PRODUCT_ERROR,
     CLEAR_PRODUCT,
-    SET_LOADING
+    SET_PRODUCT_LOADING
   } from '../actions/types';
   
   const initialState = {
@@ -67,7 +67,7 @@ import {
           product: null,
           error: null
         };
-      case SET_LOADING:
+      case SET_PRODUCT_LOADING:
         return {
           ...state,
           loading: true

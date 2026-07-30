@@ -1,54 +1,65 @@
-// src/App.js - Update your existing App.js file
-
-import React, { useEffect } from 'react';
+// src/App.js
+import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import store from './store';
 import setAuthToken from './utils/setAuthToken';
 import { loadUser } from './actions/authActions';
 
-// Import i18n
+// Import i18n (must be eager — initialises before any page renders)
 import './i18n';
 
-// Components
+// Global chrome — must be eager so layout is never deferred
 import Navbar from './components/layout/Navbar';
 import Alert from './components/layout/Alert';
 import PrivateRoute from './components/routing/PrivateRoute';
 import RoleRoute from './components/routing/RoleRoute';
 import Chatbot from './components/chatbot/Chatbot';
-import LearnHome from './pages/learn/LearnHome';
 
-import ModernTechnology from './pages/learn/ModernTechnology';
-import EcoFriendlyFarming from './pages/learn/EcoFriendlyFarming';
-// Pages
-import Home from './pages/Home';
-import Register from './pages/auth/Register';
-import Login from './pages/auth/Login';
-import Marketplace from './pages/marketplace/Marketplace';
-import ProductDetail from './pages/marketplace/ProductDetail';
-import ToolsMarketplace from './pages/tools/ToolsMarketplace';
-import ToolDetails from './pages/tools/ToolDetails';
-import FarmerDashboard from './pages/farmer/FarmerDashboard';
-import AddProduct from './pages/farmer/AddProduct';
-import EditProduct from './pages/farmer/EditProduct';
-import BuyerDashboard from './pages/buyer/BuyerDashboard';
-import OrderDetail from './pages/orders/OrderDetail';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import Profile from './pages/profile/Profile';
-import OrganicFarming from './pages/organic/OrganicFarming';
-import NotFound from './pages/NotFound';
-import CropRecommendation from './components/crop/CropRecommendation';
-import NGOMarketplace from './pages/marketplace/NGOMarketplace';
-import CarbonFootprintCalculator from './pages/carbon/CarbonFootprintCalculator';
-import PestDetection from './pages/pest/PestDetection';
+// Spinner used as Suspense fallback
+import { SpinnerBlock } from './components/ui/Spinner.jsx';
 
-import IpadWorkspace from './pages/dashboard/IpadWorkspace';
-import MaintenanceLogs from './pages/maintenance/MaintenanceLogs';
+// ---------------------------------------------------------------------------
+// Route-level code splitting — every page is loaded only when its route is hit
+// ---------------------------------------------------------------------------
+const Home = lazy(() => import('./pages/Home'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Marketplace = lazy(() => import('./pages/marketplace/Marketplace'));
+const ProductDetail = lazy(() => import('./pages/marketplace/ProductDetail'));
+const NGOMarketplace = lazy(() => import('./pages/marketplace/NGOMarketplace'));
+const ToolsMarketplace = lazy(() => import('./pages/tools/ToolsMarketplace'));
+const ToolDetails = lazy(() => import('./pages/tools/ToolDetails'));
+const CarbonFootprintCalculator = lazy(() => import('./pages/carbon/CarbonFootprintCalculator'));
+const PestDetection = lazy(() => import('./pages/pest/PestDetection'));
+const IpadWorkspace = lazy(() => import('./pages/dashboard/IpadWorkspace'));
+const MaintenanceLogs = lazy(() => import('./pages/maintenance/MaintenanceLogs'));
+const Profile = lazy(() => import('./pages/profile/Profile'));
+const OrderDetail = lazy(() => import('./pages/orders/OrderDetail'));
+const FarmerDashboard = lazy(() => import('./pages/farmer/FarmerDashboard'));
+const AddProduct = lazy(() => import('./pages/farmer/AddProduct'));
+const EditProduct = lazy(() => import('./pages/farmer/EditProduct'));
+const BuyerDashboard = lazy(() => import('./pages/buyer/BuyerDashboard'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const LearnHome = lazy(() => import('./pages/learn/LearnHome'));
+const OrganicFarming = lazy(() => import('./pages/organic/OrganicFarming'));
+const ModernTechnology = lazy(() => import('./pages/learn/ModernTechnology'));
+const EcoFriendlyFarming = lazy(() => import('./pages/learn/EcoFriendlyFarming'));
+const CropRecommendation = lazy(() => import('./components/crop/CropRecommendation'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Check for token in localStorage
+// ---------------------------------------------------------------------------
+// Auth bootstrap — runs once before the first render
+// ---------------------------------------------------------------------------
 if (localStorage.token) {
   setAuthToken(localStorage.token);
 }
+
+const SuspenseFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <SpinnerBlock label="Loading…" size="lg" tone="green" />
+  </div>
+);
 
 const App = () => {
   useEffect(() => {
@@ -63,66 +74,66 @@ const App = () => {
           <Chatbot />
           <div className="container mx-auto px-4 py-8">
             <Alert />
-            <Switch>
-              <Route exact path="/" component={Home} />
-              <Route exact path="/register" component={Register} />
-              <Route exact path="/login" component={Login} />
-              <Route exact path="/marketplace" component={Marketplace} />
-              <Route exact path="/ngo-marketplace" component={NGOMarketplace} />
-              <Route exact path="/products/:id" component={ProductDetail} />
-              <Route exact path="/tools-marketplace" component={ToolsMarketplace} />
-              <Route exact path="/tools/:toolId" component={ToolDetails} />
-              <Route exact path="/carbon-footprint" component={CarbonFootprintCalculator} />
-              <Route exact path="/pest-detection" component={PestDetection} />
+            <Suspense fallback={<SuspenseFallback />}>
+              <Switch>
+                <Route exact path="/" component={Home} />
+                <Route exact path="/register" component={Register} />
+                <Route exact path="/login" component={Login} />
+                <Route exact path="/marketplace" component={Marketplace} />
+                <Route exact path="/ngo-marketplace" component={NGOMarketplace} />
+                <Route exact path="/products/:id" component={ProductDetail} />
+                <Route exact path="/tools-marketplace" component={ToolsMarketplace} />
+                <Route exact path="/tools/:toolId" component={ToolDetails} />
+                <Route exact path="/carbon-footprint" component={CarbonFootprintCalculator} />
+                <Route exact path="/pest-detection" component={PestDetection} />
+                <Route exact path="/workspace" component={IpadWorkspace} />
+                <Route exact path="/maintenance-logs" component={MaintenanceLogs} />
 
-              <Route exact path="/workspace" component={IpadWorkspace} />
+                <PrivateRoute exact path="/profile" component={Profile} />
+                <PrivateRoute exact path="/orders/:id" component={OrderDetail} />
 
-              <Route exact path="/maintenance-logs" component={MaintenanceLogs} />
+                <RoleRoute
+                  exact
+                  path="/farmer/dashboard"
+                  component={FarmerDashboard}
+                  role="farmer"
+                />
+                <RoleRoute
+                  exact
+                  path="/farmer/products/add"
+                  component={AddProduct}
+                  role="farmer"
+                />
+                <RoleRoute
+                  exact
+                  path="/farmer/products/edit/:id"
+                  component={EditProduct}
+                  role="farmer"
+                />
 
+                <RoleRoute
+                  exact
+                  path="/buyer/dashboard"
+                  component={BuyerDashboard}
+                  role={['buyer', 'ngo_buyer']}
+                />
 
-              <PrivateRoute exact path="/profile" component={Profile} />
-              <PrivateRoute exact path="/orders/:id" component={OrderDetail} />
+                <RoleRoute
+                  exact
+                  path="/admin/dashboard"
+                  component={AdminDashboard}
+                  role="admin"
+                />
 
-              <RoleRoute
-                exact
-                path="/farmer/dashboard"
-                component={FarmerDashboard}
-                role="farmer"
-              />
-              <RoleRoute
-                exact
-                path="/farmer/products/add"
-                component={AddProduct}
-                role="farmer"
-              />
-              <RoleRoute
-                exact
-                path="/farmer/products/edit/:id"
-                component={EditProduct}
-                role="farmer"
-              />
-
-              <RoleRoute
-                exact
-                path="/buyer/dashboard"
-                component={BuyerDashboard}
-                role={['buyer', 'ngo_buyer']}
-              />
-
-              <RoleRoute
-                exact
-                path="/admin/dashboard"
-                component={AdminDashboard}
-                role="admin"
-              />
-              // SDG Knowledge Hub routes
-              <Route exact path="/sdg-knowledge" component={LearnHome} />
-              <Route exact path="/sdg-knowledge/organic-farming" component={OrganicFarming} />
-              <Route exact path="/sdg-knowledge/modern-technology" component={ModernTechnology} />
-              <Route exact path="/sdg-knowledge/eco-friendly" component={EcoFriendlyFarming} />
-              <Route exact path="/crop-recommendation" component={CropRecommendation} />
-              <Route component={NotFound} />
-            </Switch>
+                {/* SDG Knowledge Hub routes */}
+                <Route exact path="/sdg-knowledge" component={LearnHome} />
+                <Route exact path="/sdg-knowledge/organic-farming" component={OrganicFarming} />
+                <Route exact path="/sdg-knowledge/modern-technology" component={ModernTechnology} />
+                <Route exact path="/sdg-knowledge/eco-friendly" component={EcoFriendlyFarming} />
+                <Route exact path="/crop-recommendation" component={CropRecommendation} />
+                <Route component={NotFound} />
+              </Switch>
+            </Suspense>
           </div>
         </div>
       </Router>

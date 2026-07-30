@@ -6,7 +6,7 @@ import {
     CANCEL_ORDER,
     ORDER_ERROR,
     CLEAR_ORDER,
-    SET_LOADING
+    SET_ORDER_LOADING
   } from '../actions/types';
   
   const initialState = {
@@ -60,7 +60,7 @@ import {
           order: null,
           error: null
         };
-      case SET_LOADING:
+      case SET_ORDER_LOADING:
         return {
           ...state,
           loading: true

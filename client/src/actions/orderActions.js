@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 import { setAlert } from './alertActions';
 import {
   GET_ORDERS,
@@ -8,15 +8,15 @@ import {
   CANCEL_ORDER,
   ORDER_ERROR,
   CLEAR_ORDER,
-  SET_LOADING
+  SET_ORDER_LOADING
 } from './types';
 
 // Get all orders
 export const getOrders = () => async dispatch => {
   try {
-    dispatch({ type: SET_LOADING });
+    dispatch({ type: SET_ORDER_LOADING });
     
-    const res = await axios.get('/api/orders');
+    const res = await api.get('/api/orders');
 
     dispatch({
       type: GET_ORDERS,
@@ -33,10 +33,9 @@ export const getOrders = () => async dispatch => {
 // Get single order
 export const getOrder = id => async dispatch => {
   try {
-    dispatch({ type: SET_LOADING });
+    dispatch({ type: SET_ORDER_LOADING });
     
-    const res = await axios.get(`/api/orders/${id}`);
-    console.log('Order response:', res.data);
+    const res = await api.get(`/api/orders/${id}`);
 
     if (!res.data.success) {
       throw new Error(res.data.message || 'Failed to fetch order');
@@ -67,7 +66,7 @@ export const createOrder = (orderData) => async dispatch => {
       }
     };
 
-    const res = await axios.post('/api/orders', orderData, config);
+    const res = await api.post('/api/orders', orderData, config);
 
     dispatch({
       type: CREATE_ORDER,
@@ -97,7 +96,7 @@ export const updateOrderStatus = (id, status) => async dispatch => {
       }
     };
 
-    const res = await axios.put(`/api/orders/${id}`, { status }, config);
+    const res = await api.put(`/api/orders/${id}`, { status }, config);
 
     dispatch({
       type: UPDATE_ORDER,
@@ -117,7 +116,7 @@ export const updateOrderStatus = (id, status) => async dispatch => {
 export const cancelOrder = id => async dispatch => {
   if (window.confirm('Are you sure you want to cancel this order?')) {
     try {
-      const res = await axios.put(`/api/orders/${id}/cancel`);
+      const res = await api.put(`/api/orders/${id}/cancel`);
 
       dispatch({
         type: CANCEL_ORDER,

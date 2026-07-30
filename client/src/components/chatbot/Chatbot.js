@@ -8,39 +8,35 @@ import {
   deleteProduct, 
   getProducts 
 } from '../../actions/productActions';
-import { 
-  createOrder, 
-  getOrder, 
-  getOrders 
+import {
+  createOrder,
+  getOrder
 } from '../../actions/orderActions';
-import { ELEVENLABS_API_KEY, ASSEMBLYAI_API_KEY } from '../../config/apiKeys';
-import { 
-  RECORDING_TIMEOUT, 
-  VOICE_ID, 
+import {
+  RECORDING_TIMEOUT,
   MAX_SPEECH_LENGTH,
   SYSTEM_PROMPT,
-  FUNCTION_DEFINITIONS 
+  FUNCTION_DEFINITIONS
 } from './ChatbotConfig';
-import { 
-  useOpenAI, 
-  useSpeechToText, 
-  useTextToSpeech, 
+import {
+  useAIChat,
+  useSpeechToText,
+  useTextToSpeech,
   useChatMessages,
-  useFunctionCalling 
+  useFunctionCalling
 } from './ChatbotHooks';
 import { ChatMessageList, ChatInputForm, LanguageSelector } from './ChatbotComponents';
 import './Chatbot.css';
-import axios from 'axios';
+import api from '../../utils/api';
 
-const Chatbot = ({ 
-  auth, 
-  addProduct, 
+const Chatbot = ({
+  auth,
+  addProduct,
   updateProduct,
   deleteProduct,
-  getProducts, 
-  createOrder, 
-  getOrder,
-  getOrders 
+  getProducts,
+  createOrder,
+  getOrder
 }) => {
   const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -53,11 +49,8 @@ const Chatbot = ({
   // Get user role for personalized experience
   const userRole = auth.isAuthenticated ? auth.user?.role : 'guest';
 
-  // Initialize OpenAI client
-  const { generateResponse } = useOpenAI(
-    "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",
-    "https://models.github.ai/inference"
-  );
+  // AI requests are proxied by our server, which holds the provider key.
+  const { generateResponse } = useAIChat();
 
   // Create a personalized system prompt by replacing the role placeholder
   const personalizedSystemPrompt = useMemo(() => {
@@ -209,7 +202,7 @@ const Chatbot = ({
         const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
         
         // Call the API to get orders
-        const response = await axios.get(`/api/orders${queryString}`);
+        const response = await api.get(`/api/orders${queryString}`);
         
         // Format orders for chat display
         if (response.data.data && response.data.data.length > 0) {
@@ -263,14 +256,14 @@ const Chatbot = ({
           query += ` for ${args.challenge}`;
         }
         
-        // Use the OpenAI API directly for this to get dynamic farming advice
+        // Ask the server-side AI proxy for dynamic farming advice
         const response = await generateResponse([
           { role: 'system', content: 'You are an agricultural expert specializing in organic farming. Provide practical, actionable advice for farmers. Be concise and focus on specific techniques that can be implemented immediately.' },
           { role: 'user', content: query }
         ]);
-        
-        const farmingAdvice = response.choices[0].message.content;
-        
+
+        const farmingAdvice = response.content;
+
         return {
           success: true,
           query,
@@ -521,33 +514,31 @@ const Chatbot = ({
         ...messages.filter(msg => !msg.isRecording && msg.role !== 'tool')
       ];
       
-      // Call OpenAI API with function calling enabled
-      const response = await generateResponse(
+      // Call the server-side AI proxy with function calling enabled
+      const { content, toolCalls } = await generateResponse(
         [...apiMessages, { role: 'user', content: userInput }],
         FUNCTION_DEFINITIONS
       );
-      
-      const responseMessage = response.choices[0].message;
-      
+
       // Check if the model wants to call a function
-      if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      if (toolCalls && toolCalls.length > 0) {
         // Get the function call details
-        const functionCall = responseMessage.tool_calls[0];
+        const functionCall = toolCalls[0];
         const toolCallId = functionCall.id;
-        
+
         // Add AI's response message to the chat
         addAssistantMessage(
-          responseMessage.content || "Let me help with that...",
-          responseMessage.tool_calls
+          content || "Let me help with that...",
+          toolCalls
         );
-        
+
         try {
           // Execute the function
           const functionResult = await executeFunction(functionCall);
           
           // Add function result as a tool message
-          const toolMessage = addToolMessage(toolCallId, functionResult);
-          
+          addToolMessage(toolCallId, functionResult);
+
           // Get AI to respond to the function result
           const secondApiMessages = [
             { role: 'system', content: personalizedSystemPrompt },
@@ -555,9 +546,9 @@ const Chatbot = ({
           ];
           
           const functionResponse = await generateResponse(secondApiMessages);
-          
-          const finalResponse = functionResponse.choices[0].message.content;
-          
+
+          const finalResponse = functionResponse.content;
+
           // Add AI's response to the chat
           addAssistantMessage(finalResponse);
           
@@ -568,8 +559,8 @@ const Chatbot = ({
           addAssistantMessage(t('chatbot.function_error'));
         }
       } else {
-        const assistantResponse = responseMessage.content;
-        
+        const assistantResponse = content;
+
         // Add AI response to chat
         addAssistantMessage(assistantResponse);
         
@@ -620,11 +611,7 @@ const Chatbot = ({
     startRecording, 
     stopRecording,
     setLanguage
-  } = useSpeechToText(
-    ASSEMBLYAI_API_KEY, 
-    handleTranscriptionComplete, 
-    handleTranscriptionError
-  );
+  } = useSpeechToText(handleTranscriptionComplete, handleTranscriptionError);
 
   // Handle language change
   const handleLanguageChange = useCallback((language) => {
