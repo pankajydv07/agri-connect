@@ -10,6 +10,12 @@ const router = express.Router();
 // Both endpoints were previously mounted unauthenticated directly on `app`,
 // letting anonymous callers spend the project's Google Cloud quota.
 router.post('/transcribe', protect, aiLimiter, audioUpload.single('audio'), transcribe);
-router.post('/speak', protect, aiLimiter, validate(schemas.speak), speak);
+
+/**
+ * Two paths on purpose. This router is mounted at both `/api/speech` and
+ * `/api/speak`; the client posts directly to `/api/speak`, which resolves to
+ * '/' here. Without the '/' entry that call 404s.
+ */
+router.post(['/speak', '/'], protect, aiLimiter, validate(schemas.speak), speak);
 
 module.exports = router;
