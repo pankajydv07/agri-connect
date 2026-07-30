@@ -1,111 +1,102 @@
 const axios = require('axios');
+const env = require('../config/env');
+const { AppError, asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../config/logger');
 
-const getCropRecommendation = async (req, res) => {
+const SYSTEM_PROMPT =
+  'You are an expert agricultural advisor with deep knowledge of crop selection, farming ' +
+  "practices, and local agricultural conditions. Provide detailed, practical recommendations " +
+  "tailored to the farmer's specific situation.";
+
+const buildPrompt = (input) => {
+  const lines = [
+    'Provide a detailed crop recommendation for a farm with the following characteristics:',
+    `- Location: ${input.location}`,
+    `- Season: ${input.season}`,
+    `- Soil Type: ${input.soil}`,
+  ];
+
+  if (input.previousCrops) lines.push(`- Previous Crops: ${input.previousCrops}`);
+  if (input.irrigationAvailable) lines.push(`- Irrigation: ${input.irrigationAvailable}`);
+  if (input.landSize) lines.push(`- Land Size: ${input.landSize} acres`);
+  if (input.soilPh) lines.push(`- Soil pH: ${input.soilPh}`);
+  if (input.farmingExperience) lines.push(`- Farmer Experience Level: ${input.farmingExperience}`);
+
+  lines.push(
+    '',
+    'Please provide:',
+    '1. Top 3 recommended crops with reasons',
+    '2. Expected yield per acre',
+    '3. Required irrigation and fertilizer needs',
+    '4. Potential challenges and mitigation strategies',
+    '5. Crop rotation suggestions based on previous crops (if provided)',
+    "6. Additional tips based on the farmer's experience level"
+  );
+
+  return lines.join('\n');
+};
+
+// @desc    Get an AI crop recommendation
+// @route   POST /api/crop/recommend
+// @access  Private
+const getCropRecommendation = asyncHandler(async (req, res) => {
+  // The bearer token used to be a hardcoded string literal in this file, valid
+  // until 2030, committed to a public repository.
+  if (!env.nebius.configured) {
+    throw new AppError('Crop recommendation is not configured on this server', 503);
+  }
+
+  const prompt = buildPrompt(req.body);
+
+  let response;
   try {
-    const { 
-      soil, 
-      season, 
-      location, 
-      previousCrops, 
-      irrigationAvailable,
-      landSize,
-      soilPh,
-      farmingExperience 
-    } = req.body;
-
-    // Validate required fields
-    if (!soil || !season || !location) {
-      return res.status(400).json({ 
-        error: 'Missing required fields. Please provide soil type, season, and location.' 
-      });
-    }
-
-    // Construct a detailed prompt
-    let prompt = `Provide a detailed crop recommendation for a farm with the following characteristics:
-- Location: ${location}
-- Season: ${season}
-- Soil Type: ${soil}`;
-
-    // Add optional information to the prompt if provided
-    if (previousCrops) {
-      prompt += `\n- Previous Crops: ${previousCrops}`;
-    }
-    if (irrigationAvailable) {
-      prompt += `\n- Irrigation: ${irrigationAvailable}`;
-    }
-    if (landSize) {
-      prompt += `\n- Land Size: ${landSize} acres`;
-    }
-    if (soilPh) {
-      prompt += `\n- Soil pH: ${soilPh}`;
-    }
-    if (farmingExperience) {
-      prompt += `\n- Farmer Experience Level: ${farmingExperience}`;
-    }
-
-    prompt += `\n\nPlease provide:
-1. Top 3 recommended crops with reasons
-2. Expected yield per acre
-3. Required irrigation and fertilizer needs
-4. Potential challenges and mitigation strategies
-5. Crop rotation suggestions based on previous crops (if provided)
-6. Additional tips based on the farmer's experience level`;
-
-    const response = await axios.post(
-      'https://api.studio.nebius.com/v1/chat/completions',
+    response = await axios.post(
+      `${env.nebius.baseUrl}/chat/completions`,
       {
-        model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-fast-LoRa:CropRecommendation-ZIHX',
+        model: env.nebius.model,
         temperature: 0,
         messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert agricultural advisor with deep knowledge of crop selection, farming practices, and local agricultural conditions. Provide detailed, practical recommendations tailored to the farmer\'s specific situation.' 
-          },
-          { role: 'user', content: prompt }
-        ]
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Accept': '*/*',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsImtpZCI6IlV6SXJWd1h0dnprLVRvdzlLZWstc0M1akptWXBvX1VaVkxUZlpnMDRlOFUiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJnaXRodWJ8MTU3Njg2Mzc4Iiwic2NvcGUiOiJvcGVuaWQgb2ZmbGluZV9hY2Nlc3MiLCJpc3MiOiJhcGlfa2V5X2lzc3VlciIsImF1ZCI6WyJodHRwczovL25lYml1cy1pbmZlcmVuY2UuZXUuYXV0aDAuY29tL2FwaS92Mi8iXSwiZXhwIjoxOTAyNzk3MDk2LCJ1dWlkIjoiYTg2ZDEyMzUtNjc0OC00MDAyLTgyOTEtZDJhYzI2ZWMzZTUwIiwibmFtZSI6IlBBTktBSiIsImV4cGlyZXNfYXQiOiIyMDMwLTA0LTE5VDAyOjQ0OjU2KzAwMDAifQ.H6mycVqZy0zRfwnyJc4qSiFD_hG3lj1r4cLKcctWBnw'
-        }
+          Authorization: `Bearer ${env.nebius.apiKey}`,
+        },
+        timeout: 30000,
       }
     );
+  } catch (error) {
+    // Log the provider's response for us; return something actionable to the user.
+    logger.error(
+      { err: error, status: error.response?.status, body: error.response?.data },
+      'Nebius crop recommendation request failed'
+    );
 
-    if (!response.data || !response.data.choices || !response.data.choices[0]) {
-      console.error('Invalid response format from Nebius API:', response.data);
-      return res.status(500).json({ 
-        error: 'Invalid response from crop recommendation service.' 
-      });
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      throw new AppError('The recommendation service timed out — please try again', 504);
     }
-
-    const recommendation = response.data.choices[0].message.content;
-    res.json({ recommendation });
-
-  } catch (err) {
-    console.error('Error in crop recommendation:', err.response ? err.response.data : err);
-    
-    // Handle specific error cases
-    if (err.response) {
-      if (err.response.status === 401) {
-        return res.status(500).json({ 
-          error: 'Authentication error with crop recommendation service.' 
-        });
-      }
-      if (err.response.status === 404) {
-        return res.status(500).json({ 
-          error: 'Crop recommendation service not found.' 
-        });
-      }
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      throw new AppError('Crop recommendation service rejected our credentials', 502);
     }
-    
-    res.status(500).json({ 
-      error: 'Failed to fetch crop recommendation. Please try again later.' 
-    });
+    if (error.response?.status === 429) {
+      throw new AppError('Recommendation service is rate limited — please try again shortly', 429);
+    }
+    throw new AppError('Failed to fetch a crop recommendation — please try again later', 502);
   }
-};
 
-module.exports = {
-  getCropRecommendation
-}; 
+  const recommendation = response.data?.choices?.[0]?.message?.content;
+
+  if (!recommendation) {
+    logger.error({ body: response.data }, 'Unexpected Nebius response shape');
+    throw new AppError('Received an invalid response from the recommendation service', 502);
+  }
+
+  // `recommendation` is kept for backwards compatibility with the existing
+  // client; `data` matches the response envelope used everywhere else.
+  res.status(200).json({ success: true, data: { recommendation }, recommendation });
+});
+
+module.exports = { getCropRecommendation };

@@ -1,44 +1,46 @@
+/**
+ * Upload middleware.
+ *
+ * Consolidates what used to be three overlapping multer instances
+ * (`middleware/multer.js`, `middleware/upload.js`, and an inline config in
+ * `server.js`) with different filters and no single source of truth.
+ *
+ * Product images stream directly to Cloudinary; audio is held in memory and
+ * handed to Google Cloud Speech, so nothing is ever written to local disk.
+ */
+
 const multer = require('multer');
-const path = require('path');
+const env = require('../config/env');
+const { storage } = require('../utils/cloudinary');
 
-// Set storage engine
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, './uploads/');
-  },
-  filename: function(req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
+const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+const AUDIO_MIME_PREFIXES = ['audio/', 'video/webm'];
 
-// Check file type
-const fileFilter = (req, file, cb) => {
-  // Allow only images
-  const filetypes = /jpeg|jpg|png|gif|webp/;
-  
-  // Check the file's MIME type
-  const mimetype = filetypes.test(file.mimetype);
-  
-  // Check the file extension
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-  if (mimetype && extname) {
+const imageFilter = (req, file, cb) => {
+  if (IMAGE_MIME_TYPES.has(file.mimetype)) {
     return cb(null, true);
-  } else {
-    console.log('File rejected:', {
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size
-    });
-    cb(new Error('Only image files (jpeg, jpg, png, gif, webp) are allowed!'));
   }
+  return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'image'));
 };
 
-// Initialize upload
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5000000 }, // 5MB
-  fileFilter: fileFilter
+const audioFilter = (req, file, cb) => {
+  // Browsers record as audio/webm or video/webm depending on the platform.
+  if (AUDIO_MIME_PREFIXES.some((prefix) => file.mimetype.startsWith(prefix))) {
+    return cb(null, true);
+  }
+  return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'audio'));
+};
+
+const productImageUpload = multer({
+  storage,
+  fileFilter: imageFilter,
+  limits: { fileSize: env.MAX_UPLOAD_BYTES, files: 1 },
 });
 
-module.exports = upload;
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: audioFilter,
+  limits: { fileSize: env.MAX_AUDIO_UPLOAD_BYTES, files: 1 },
+});
+
+module.exports = { productImageUpload, audioUpload };

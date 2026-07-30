@@ -1,0 +1,55 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "commonjs": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "commonjs"
+  },
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "argsIgnorePattern": "^_|^next$",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "no-console": "warn",
+    "no-process-exit": "warn",
+    "no-var": "error",
+    "prefer-const": "error",
+    "eqeqeq": ["error", "always"],
+    "curly": ["error", "all"],
+    "no-throw-literal": "error",
+    "no-return-await": "error",
+    "require-await": "error"
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*.js", "**/*.test.js"],
+      "env": {
+        "jest": true
+      },
+      "rules": {
+        "no-unused-vars": [
+          "error",
+          {
+            "vars": "all",
+            "args": "after-used",
+            "argsIgnorePattern": "^_|^next$",
+            "ignoreRestSiblings": true
+          }
+        ]
+      }
+    }
+  ]
+}

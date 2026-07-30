@@ -1,229 +1,223 @@
 const Product = require('../models/Product');
 const User = require('../models/User');
-const cloudinary = require('../utils/cloudinary');
+const { AppError, asyncHandler } = require('../middleware/errorHandler');
+const { destroy, publicIdFromUrl } = require('../utils/cloudinary');
+const logger = require('../config/logger');
+
+/** Fields a farmer is allowed to write. Notably excludes `farmer`. */
+const WRITABLE_FIELDS = [
+  'cropName',
+  'description',
+  'quantity',
+  'unit',
+  'price',
+  'availableUntil',
+  'status',
+];
+
+const pickWritable = (body) =>
+  WRITABLE_FIELDS.reduce((acc, field) => {
+    if (body[field] !== undefined) acc[field] = body[field];
+    return acc;
+  }, {});
+
+/**
+ * Builds a MongoDB filter from validated query params.
+ *
+ * The original stringified `req.query` and regex-replaced `gt|gte|lt|lte|in`
+ * into `$gt`-style operators, promoting arbitrary user input into query
+ * operators. Every filter is now explicit and typed.
+ */
+const buildProductFilter = async (query) => {
+  const filter = {};
+
+  if (query.status) filter.status = query.status;
+  if (query.farmer) filter.farmer = query.farmer;
+
+  if (query.cropName) {
+    // Escape regex metacharacters so a crafted name can't build a catastrophic pattern.
+    const safe = query.cropName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.cropName = new RegExp(safe, 'i');
+  }
+
+  if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+    filter.price = {};
+    if (query.minPrice !== undefined) filter.price.$gte = query.minPrice;
+    if (query.maxPrice !== undefined) filter.price.$lte = query.maxPrice;
+  }
+
+  // `location` lives on the farmer, not the product. The old code passed it
+  // straight to Product.find(), where it silently matched nothing — the
+  // marketplace location filter never actually worked.
+  if (query.location) {
+    const safe = query.location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const farmers = await User.find({ location: new RegExp(safe, 'i') }).select('_id').lean();
+    filter.farmer = { $in: farmers.map((f) => f._id) };
+  }
+
+  return filter;
+};
 
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Public
-exports.getProducts = async (req, res) => {
-  try {
-    let query;
-    const reqQuery = { ...req.query };
+exports.getProducts = asyncHandler(async (req, res) => {
+  const { page, limit, sort, select } = req.query;
+  const filter = await buildProductFilter(req.query);
 
-    // Fields to exclude
-    const removeFields = ['select', 'sort', 'page', 'limit'];
-    removeFields.forEach(param => delete reqQuery[param]);
+  const skip = (page - 1) * limit;
 
-    // Create query string
-    let queryStr = JSON.stringify(reqQuery);
-    
-    // Create operators ($gt, $gte, etc)
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
-    
-    // Finding resource
-    query = Product.find(JSON.parse(queryStr)).populate({
-      path: 'farmer',
-      select: 'name location phone'
-    });
+  let query = Product.find(filter)
+    .populate({ path: 'farmer', select: 'name location phone' })
+    .sort(sort ? sort.split(',').join(' ') : '-createdAt')
+    .skip(skip)
+    .limit(limit);
 
-    // Select Fields
-    if (req.query.select) {
-      const fields = req.query.select.split(',').join(' ');
-      query = query.select(fields);
-    }
-
-    // Sort
-    if (req.query.sort) {
-      const sortBy = req.query.sort.split(',').join(' ');
-      query = query.sort(sortBy);
-    } else {
-      query = query.sort('-createdAt');
-    }
-
-    // Pagination
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const total = await Product.countDocuments(JSON.parse(queryStr));
-
-    query = query.skip(startIndex).limit(limit);
-
-    // Executing query
-    const products = await query;
-
-    // Pagination result
-    const pagination = {};
-
-    if (endIndex < total) {
-      pagination.next = {
-        page: page + 1,
-        limit
-      };
-    }
-
-    if (startIndex > 0) {
-      pagination.prev = {
-        page: page - 1,
-        limit
-      };
-    }
-
-    res.status(200).json({
-      success: true,
-      count: products.length,
-      pagination,
-      data: products
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (select) {
+    query = query.select(select.split(',').join(' '));
   }
-};
+
+  // Run the page and the count concurrently rather than serially.
+  const [products, total] = await Promise.all([
+    query.lean(),
+    Product.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    count: products.length,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 1,
+      hasNext: skip + products.length < total,
+      hasPrev: page > 1,
+    },
+    data: products,
+  });
+});
 
 // @desc    Get single product
 // @route   GET /api/products/:id
 // @access  Public
-exports.getProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id).populate({
-      path: 'farmer',
-      select: 'name location phone'
-    });
+exports.getProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id).populate({
+    path: 'farmer',
+    select: 'name location phone',
+  });
 
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: product
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (!product) {
+    throw new AppError('Product not found', 404);
   }
-};
+
+  res.status(200).json({ success: true, data: product });
+});
 
 // @desc    Create new product
 // @route   POST /api/products
 // @access  Private (Farmers only)
-exports.createProduct = async (req, res) => {
-  try {
-    // Add user to req.body
-    req.body.farmer = req.user.id;
+exports.createProduct = asyncHandler(async (req, res) => {
+  const payload = pickWritable(req.body);
 
-    // Check if user is a farmer
-    if (req.user.role !== 'farmer') {
-      return res.status(403).json({ message: 'Only farmers can add products' });
-    }
+  // Ownership is derived from the token, never from the request body.
+  payload.farmer = req.user.id;
 
-    // Upload image to Cloudinary if present
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'agri-connect/products'
-      });
-      req.body.image = result.secure_url;
-    }
-
-    const product = await Product.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      data: product
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  // With CloudinaryStorage, multer puts the secure URL on `path`.
+  if (req.file) {
+    payload.image = req.file.path;
   }
-};
+
+  const product = await Product.create(payload);
+
+  res.status(201).json({ success: true, data: product });
+});
 
 // @desc    Update product
 // @route   PUT /api/products/:id
-// @access  Private (Farmers only)
-exports.updateProduct = async (req, res) => {
-  try {
-    let product = await Product.findById(req.params.id);
+// @access  Private (Owner farmer or admin)
+exports.updateProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
 
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // Make sure user is the product owner
-    if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to update this product' });
-    }
-
-    product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
-
-    res.status(200).json({
-      success: true,
-      data: product
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (!product) {
+    throw new AppError('Product not found', 404);
   }
-};
+
+  if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
+    throw new AppError('Not authorized to update this product', 403);
+  }
+
+  // Allow-listed fields only. The original passed `req.body` wholesale into
+  // findByIdAndUpdate, so a farmer could send {"farmer": "<other id>"} and
+  // reassign someone else's listing to themselves.
+  const updates = pickWritable(req.body);
+  const previousImage = product.image;
+
+  if (req.file) {
+    updates.image = req.file.path;
+  }
+
+  const updated = await Product.findByIdAndUpdate(req.params.id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  // Replaced image: drop the old asset so paid storage isn't orphaned.
+  if (req.file && previousImage) {
+    try {
+      await destroy(publicIdFromUrl(previousImage));
+    } catch (error) {
+      logger.warn({ err: error, productId: req.params.id }, 'Failed to delete replaced image');
+    }
+  }
+
+  res.status(200).json({ success: true, data: updated });
+});
 
 // @desc    Delete product
 // @route   DELETE /api/products/:id
-// @access  Private (Farmers only)
-exports.deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
+// @access  Private (Owner farmer or admin)
+exports.deleteProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
 
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // Make sure user is the product owner
-    if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to delete this product' });
-    }
-
-    // Delete image from Cloudinary if exists
-  
-
-    // Delete product using findByIdAndDelete
-    await Product.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({
-      success: true,
-      data: {}
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (!product) {
+    throw new AppError('Product not found', 404);
   }
-};
 
-// @desc    Get farmer products
-// @route
+  if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
+    throw new AppError('Not authorized to delete this product', 403);
+  }
+
+  // findOneAndDelete triggers the cascade hook that removes related orders.
+  await Product.findOneAndDelete({ _id: req.params.id });
+
+  if (product.image) {
+    try {
+      await destroy(publicIdFromUrl(product.image));
+    } catch (error) {
+      logger.warn({ err: error, productId: req.params.id }, 'Failed to delete product image');
+    }
+  }
+
+  res.status(200).json({ success: true, data: {} });
+});
 
 // @desc    Update product status
 // @route   PUT /api/products/:id/status
-// @access  Private (Farmers only)
-exports.updateProductStatus = async (req, res) => {
-  try {
-    const { status } = req.body;
-    let product = await Product.findById(req.params.id);
+// @access  Private (Owner farmer or admin)
+exports.updateProductStatus = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
 
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // Make sure user is the product owner
-    if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to update this product' });
-    }
-
-    product.status = status;
-    await product.save();
-
-    res.status(200).json({
-      success: true,
-      data: product
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (!product) {
+    throw new AppError('Product not found', 404);
   }
-};
+
+  if (product.farmer.toString() !== req.user.id && req.user.role !== 'admin') {
+    throw new AppError('Not authorized to update this product', 403);
+  }
+
+  product.status = req.body.status;
+  await product.save();
+
+  res.status(200).json({ success: true, data: product });
+});
